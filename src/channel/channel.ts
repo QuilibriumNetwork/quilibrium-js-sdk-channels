@@ -1221,7 +1221,8 @@ const CreateTripleRatchetGroupInfo = async () => {
 export const EstablishTripleRatchetSessionForSpace = async (
   user_keyset: UserKeyset,
   device_keyset: DeviceKeyset,
-  registration: UserRegistration
+  registration: UserRegistration,
+  total: number = 10000,
 ) => {
   let filteredRegistration = registration;
   if (filteredRegistration.device_registrations.length > 1) {
@@ -1340,7 +1341,7 @@ export const EstablishTripleRatchetSessionForSpace = async (
           'base64'
         ).toString('hex'),
         id: 2,
-        total: 10000,
+        total: total,
       })
     )
   ) as number[][];
