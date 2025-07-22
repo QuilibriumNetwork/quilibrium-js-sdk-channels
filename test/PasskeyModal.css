@@ -1,0 +1,244 @@
+/* === PASSKEY MODAL STYLES === */
+/* Pure CSS classes for PasskeyModal component - no external dependencies */
+
+/* Backdrop overlay */
+.passkey-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.6s ease-in-out;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+}
+
+.passkey-modal-backdrop.hidden {
+  display: none;
+}
+
+/* Main modal container */
+.passkey-modal-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100vw - 2rem);
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  border: 1px solid rgb(229, 231, 235);
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 16px;
+  color: rgb(31, 41, 55);
+  text-align: center;
+}
+
+/* Modal header */
+.passkey-modal-header {
+  text-align: center;
+  padding: 16px;
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 28px;
+  color: rgb(17, 24, 39);
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .passkey-modal-header {
+    font-size: 20px;
+    line-height: 28px;
+  }
+}
+
+/* Icon container wrapper */
+.passkey-modal-icon-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+/* Passkey icon container */
+.passkey-modal-icon {
+  position: relative;
+  z-index: 100;
+  font-weight: bold;
+  transition: all 0.3s ease-in-out;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 50%;
+  padding: 8px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23pt;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Icon success state */
+.passkey-modal-icon.success {
+  background-color: rgb(34, 197, 94);
+  border-color: rgb(134, 239, 172);
+  color: white;
+}
+
+/* Icon error state */
+.passkey-modal-icon.error {
+  background-color: rgb(239, 68, 68);
+  border-color: rgb(252, 165, 165);
+  font-weight: normal;
+  color: white;
+}
+
+/* Icon default/loading state */
+.passkey-modal-icon.default {
+  background-color: #0287F2;
+  border-color: #0266CC;
+  background-size: cover;
+}
+
+/* Icon pulsating animation */
+.passkey-modal-icon.pulsating {
+  animation: pulsate 2s ease-in-out infinite;
+}
+
+@keyframes pulsate {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+/* Content text areas */
+.passkey-modal-content {
+  margin-bottom: 16px;
+  margin-left: 16px;
+  margin-right: 16px;
+  font-size: 14px;
+}
+
+@media (min-width: 640px) {
+  .passkey-modal-content {
+    font-size: 16px;
+  }
+}
+
+/* Error display container */
+.passkey-modal-error {
+  border: 1px solid rgb(229, 231, 235);
+  font-size: 12px;
+  line-height: 16px;
+  border: 1px solid rgb(229, 231, 235);
+  background-color: rgb(249, 250, 251);
+  padding: 16px;
+  margin-top: 16px;
+  border-radius: 12px;
+  color: rgb(55, 65, 81);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* File drop zone */
+.passkey-modal-dropzone {
+  border: 2px dashed rgb(209, 213, 219);
+  background-color: rgba(249, 250, 251, 0.5);
+  padding: 8px;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.passkey-modal-dropzone:hover {
+  border-color: rgb(96, 165, 250);
+  background-color: rgba(219, 234, 254, 0.5);
+}
+
+.passkey-modal-dropzone-text {
+  text-align: center;
+  font-size: 14px;
+}
+
+@media (min-width: 640px) {
+  .passkey-modal-dropzone-text {
+    font-size: 16px;
+  }
+}
+
+/* Button base styles */
+.passkey-modal-btn {
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 8px 16px;
+  border: 0;
+  margin: 8px 16px 16px 16px;
+  font-weight: 500;
+  text-align: center;
+  display: block;
+  color: white;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+}
+
+@media (min-width: 640px) {
+  .passkey-modal-btn {
+    font-size: 16px;
+  }
+}
+
+/* Primary button (Continue) - Blue */
+.passkey-modal-btn.primary {
+  background-color: #0287F2;
+}
+
+.passkey-modal-btn.primary:hover {
+  background-color: #0266CC;
+}
+
+/* Warning button (Proceed Without Passkeys) - Amber */
+.passkey-modal-btn.warning {
+  background-color: rgb(217, 119, 6);
+}
+
+.passkey-modal-btn.warning:hover {
+  background-color: rgb(180, 83, 9);
+}
+
+/* Secondary button (Cancel) - Gray */
+.passkey-modal-btn.secondary {
+  background-color: rgb(156, 163, 175);
+}
+
+.passkey-modal-btn.secondary:hover {
+  background-color: rgb(107, 114, 128);
+}
+
+/* Additional text utilities */
+.passkey-modal-text-center {
+  text-align: center;
+}
+
+.passkey-modal-mt-4 {
+  margin-top: 16px;
+}
+
+/* Hidden utility */
+.passkey-modal-hidden {
+  display: none;
+}

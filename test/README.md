@@ -1,20 +1,34 @@
-# PasskeyModal Style Test
+# PasskeyModal Testing
 
-Visual testing environment for the PasskeyModal component with inline component code for rapid styling iteration.
+Testing environment for the PasskeyModal component with both development and production build testing capabilities.
 
 ## Quick Start
 
-From the main project directory:
+### Development Testing
+For testing styling changes during development:
 
 ```bash
-npm test
+yarn test
 ```
 
+### Production Build Testing
+For testing the actual built CSS and ensuring build integrity:
+
+```bash
+yarn test-build
+```
+
+This command will:
+1. Run `yarn build` to compile the project
+2. Generate `test-build.html` using the actual built CSS from `dist/index.css`
+3. Start a server on `http://localhost:3001`
+
+### Manual Server Setup
 Or serve directly with any HTTP server:
 
 ```bash
 cd test
-python3 -m http.server 8080
+python3 -m http.server 3001
 # or
 npx http-server . -p 3001
 ```
@@ -31,13 +45,14 @@ Use the control panel (top-left) to test different modal states:
 - **Hide Modal** - Close the modal
 
 ### Current Styling
-- **Key Icon** - Uses `passkey.png` background image with proper centering
-- **Button Colors** - Subtle and elegant:
-  - Continue: `slate-600/700` (was bright blue)
-  - Proceed Without Passkeys: `amber-600/700` (was yellow)
-  - Cancel: `gray-400/500` (was gray-600)
-- **Layout** - Properly centered elements with `flex` containers
-- **Effects** - Subtle shadows and smooth transitions
+- **Modern Responsive Design** - Clean, professional modal with backdrop blur
+- **Key Icon** - Uses `passkey.png` background image with proper centering and pulsating animation
+- **Button Colors** - Professional color scheme:
+  - Continue: Blue (`#0287F2`)
+  - Proceed Without Passkeys: Amber (`#d97706`)
+  - Cancel: Gray (`#9ca3af`)
+- **Layout** - CSS-only styling with proper overflow handling
+- **No Horizontal Scrolling** - Fixed container width with `overflow-x: hidden` and `box-sizing: border-box`
 
 ### Modal States
 
@@ -52,22 +67,44 @@ Use the control panel (top-left) to test different modal states:
 
 ## Development Workflow
 
-⚠️ **Important**: The test file contains an inline copy of the PasskeyModal component for rapid styling iteration. Changes must be manually synced.
+### For Style Development
+1. **Edit styling** in `src/components/modals/PasskeyModal.css`
+2. **Test changes** using `yarn test` (serves from source CSS files)
+3. **Verify build** using `yarn test-build` (tests actual compiled CSS)
 
-1. **Edit styling** directly in `test/index.html` 
-2. **Test changes** by refreshing browser
-3. **Copy approved changes** to `src/components/modals/PasskeyModal.tsx`
-4. **Build** with `npm run build` for production
+### Two Testing Modes
 
-### Syncing Changes
-When updating styles, you need to manually copy the relevant class changes from the test file to the real component. The test file uses an inline component copy to avoid build dependencies and enable instant feedback.
+#### Development Mode (`yarn test`)
+- Uses source CSS files directly (`PasskeyModal.css`)
+- Faster iteration for styling changes
+- No build step required
+
+#### Production Mode (`yarn test-build`)
+- Runs full build process first
+- Uses compiled CSS from `dist/index.css`
+- Verifies that build process works correctly
+- Tests actual CSS that will be shipped
+
+### Recent Fixes
+- ✅ **Horizontal Scrolling Fixed** - Added `overflow-x: hidden` and `box-sizing: border-box`
+- ✅ **Dropzone Overflow Fixed** - Proper width containment for file upload area
+- ✅ **Build Process** - CSS compilation works correctly with PostCSS plugin
 
 ## Files
 
-- `index.html` - Main test page with inline PasskeyModal component  
+- `index.html` - Development test page with inline PasskeyModal component for rapid iteration
+- `test-build.html` - Generated production test page (created by `yarn test-build`)
+- `create-build-test.js` - Script that builds project and generates production test
+- `PasskeyModal.css` - Copy of source CSS for development testing
 - `README.md` - This documentation
 
-Uses CDN links for React and Tailwind CSS - no build step required!
+## Architecture
+
+- **Source CSS**: `src/components/modals/PasskeyModal.css`
+- **Built CSS**: `dist/index.css` (compiled with PostCSS)
+- **Test CSS**: `test/PasskeyModal.css` (copy for development)
+
+Uses CDN links for React - no complex build dependencies for testing!
 
 ---
 *Updated: 2025-07-22*
