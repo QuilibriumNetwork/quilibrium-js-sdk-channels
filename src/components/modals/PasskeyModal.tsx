@@ -56,40 +56,44 @@ export const PasskeyModal = ({
   return (
     <div
       className={
-        'fixed text-stone dark:text-white top-0 left-0 backdrop-blur-lg transition ease-in-out duration-600 w-full h-full bg-stone-900/40 dark:bg-stone-800/20' +
+        'fixed top-0 left-0 backdrop-blur-lg transition ease-in-out duration-600 w-full h-full bg-black/40' +
         (showPasskeyPrompt.value ? '' : ' hidden')
       }
       style={{zIndex: 10000}}
     >
-      <div className="absolute text-center top-0 left-0 w-full md:left-1/3 md:w-1/3 border border-t-0 border-stone-300/20 bg-stone-200/30 dark:bg-stone-300/30 drop-shadow-2xl rounded-none md:rounded-b-2xl">
-        <h2 className="text-center p-4 font-light text-xl">
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-2rem)] max-w-[480px] max-h-[90vh] overflow-y-auto border border-gray-200 bg-white/90 backdrop-blur-md drop-shadow-2xl rounded-2xl text-gray-800 text-center">
+        <h2 className="text-center p-4 font-semibold text-lg sm:text-xl text-gray-900">
           {showPasskeyPrompt.importMode
             ? 'Import Existing Key'
             : 'Create Passkey'}
         </h2>
-        <div
-          style={{
-            fontSize: '23pt',
-            width: '60px',
-            height: '60px',
-            backgroundImage: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? 'url("/passkey.png")' : undefined,
-          }}
-          className={
-            'relative z-100 inline-block font-bold transition ease-in-out duration-300 mb-4 border border-stone-100/30 rounded-full p-2' +
-            (passkeyRegistrationComplete === true
-              ? ' bg-green-600 border-green-200'
+        <div className="flex justify-center mb-4">
+          <div
+            style={{
+              fontSize: '23pt',
+              width: '60px',
+              height: '60px',
+              backgroundImage: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? 'url("/passkey.png")' : undefined,
+              backgroundColor: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? '#0287F2' : undefined,
+              borderColor: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? '#0266CC' : undefined,
+            }}
+            className={
+              'relative z-100 font-bold transition ease-in-out duration-300 border border-gray-200 rounded-full p-2 flex items-center justify-center' +
+              (passkeyRegistrationComplete === true
+                ? ' bg-green-500 border-green-300 text-white'
+                : passkeyRegistrationComplete === false
+                  ? ' bg-red-500 border-red-300 font-normal text-white'
+                  : " bg-cover pulsating")
+            }
+          >
+            {passkeyRegistrationComplete === true
+              ? '✓'
               : passkeyRegistrationComplete === false
-                ? ' bg-red-600 border-red-300 font-normal'
-                : " bg-cover pulsating")
-          }
-        >
-          {passkeyRegistrationComplete === true
-            ? '✓'
-            : passkeyRegistrationComplete === false
-              ? '!'
-              : ''}
+                ? '!'
+                : ''}
+          </div>
         </div>
-        <div className="mb-4 mx-4">
+        <div className="mb-4 mx-4 text-sm sm:text-base">
           {passkeyRegistrationComplete === false && passkeyRegistrationError ? (
             <>
               <div>
@@ -97,7 +101,7 @@ export const PasskeyModal = ({
                 passkey.
               </div>
               <div
-                className="border-stone-800/20 text-xs border bg-stone-800/20 p-4 mt-4 rounded-xl"
+                className="border-gray-200 text-xs border bg-gray-50 p-4 mt-4 rounded-xl text-gray-700"
                 style={{
                   fontFamily:
                     'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
@@ -132,14 +136,15 @@ export const PasskeyModal = ({
           !keypair && (
             <div className="mb-4 mx-4">
               <div
-                style={{borderColor: 'rgba(255,255,255,0.2)'}}
-                className="border border-dashed border-2 p-2 rounded-md w-full truncate"
+                className="border-2 border-dashed border-gray-300 hover:border-blue-400 bg-gray-50/50 hover:bg-blue-50/50 p-2 rounded-md w-full truncate transition-all duration-200 cursor-pointer"
                 {...getRootProps()}
               >
-                <input {...getInputProps()} />
-                {acceptedFiles.length
-                  ? acceptedFiles[0].name
-                  : 'Drop key file here'}
+                <input {...getInputProps()} style={{ display: 'none' }} />
+                <div className="text-center text-sm sm:text-base">
+                  {acceptedFiles.length
+                    ? acceptedFiles[0].name
+                    : 'Drop key file here or click to select'}
+                </div>
               </div>
             </div>
           )}
@@ -276,7 +281,10 @@ export const PasskeyModal = ({
                   }
                 }
               }}
-              className="border-stone-300/30 bg-stone-300/30 hover:bg-stone-100/30 transition ease-in-out duration-300 cursor-pointer rounded-xl px-2 p-1 border flex-col mt-2 mb-4 mx-4"
+              style={{ backgroundColor: '#0287F2' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0266CC'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0287F2'}
+              className="text-white transition ease-in-out duration-300 cursor-pointer rounded-xl px-4 py-2 border-0 mt-2 mb-4 mx-4 font-medium shadow-sm text-sm sm:text-base"
             >
               Continue
             </div>
@@ -381,7 +389,10 @@ export const PasskeyModal = ({
                 }
               }
             }}
-            className="border-stone-300/30 bg-stone-300/30 hover:bg-stone-100/30 transition ease-in-out duration-300 cursor-pointer rounded-xl px-2 p-1 border flex-col mt-2 mb-4 mx-4"
+            style={{ backgroundColor: '#0287F2' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0266CC'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0287F2'}
+            className="text-white transition ease-in-out duration-300 cursor-pointer rounded-xl px-4 py-2 border-0 mt-2 mb-4 mx-4 font-medium shadow-sm text-sm sm:text-base"
           >
             Continue
           </div>
@@ -465,7 +476,7 @@ export const PasskeyModal = ({
                 setId(undefined);
                 setPasskeyRegistrationError(undefined);
               }}
-              className="border-stone-300/30 bg-stone-300/30 hover:bg-stone-100/30 transition ease-in-out duration-300 cursor-pointer rounded-xl px-2 p-1 border flex-col mt-2 mb-4 mx-4"
+              className="bg-amber-600 hover:bg-amber-700 text-white transition ease-in-out duration-300 cursor-pointer rounded-xl px-4 py-2 border-0 mt-2 mb-4 mx-4 font-medium shadow-sm text-sm sm:text-base"
             >
               {window.localStorage.getItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`)
                 ? 'Continue'
@@ -553,7 +564,10 @@ export const PasskeyModal = ({
                 setId(undefined);
                 setPasskeyRegistrationError(undefined);
               }}
-              className="border-stone-300/30 bg-stone-300/30 hover:bg-stone-100/30 transition ease-in-out duration-300 cursor-pointer rounded-xl px-2 p-1 border flex-col mt-2 mb-4 mx-4"
+              style={{ backgroundColor: '#0287F2' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0266CC'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0287F2'}
+              className="text-white transition ease-in-out duration-300 cursor-pointer rounded-xl px-4 py-2 border-0 mt-2 mb-4 mx-4 font-medium shadow-sm text-sm sm:text-base"
             >
               Continue
             </div>
@@ -566,7 +580,7 @@ export const PasskeyModal = ({
               setKeypair(undefined);
               setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
             }}
-            className="border-stone-300/30 bg-stone-800/30 hover:bg-stone-100/30 transition ease-in-out duration-300 cursor-pointer rounded-xl px-2 p-1 border flex-col mt-2 mb-4 mx-4"
+            className="bg-gray-400 hover:bg-gray-500 text-white transition ease-in-out duration-300 cursor-pointer rounded-xl px-4 py-2 border-0 mt-2 mb-4 mx-4 font-medium shadow-sm text-sm sm:text-base"
           >
             Cancel
           </div>

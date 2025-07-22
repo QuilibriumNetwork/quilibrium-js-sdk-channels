@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PasskeyModal Style Test</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 10001;
+        }
+        
+        .control-panel h3 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .control-panel button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .control-panel button:hover {
+            background: #2563eb;
+        }
+        
+        .control-panel button:last-child {
+            margin-bottom: 0;
+        }
+        
+        .pulsating {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="control-panel">
+        <h3>PasskeyModal Tests</h3>
+        <button onclick="showModal('create')">Show Create Modal</button>
+        <button onclick="showModal('import')">Show Import Modal</button>
+        <button onclick="showModal('success')">Show Success State</button>
+        <button onclick="showModal('error')">Show Error State</button>
+        <button onclick="hideModal()">Hide Modal</button>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, createContext, useContext } = React;
+
+        // Mock PasskeysContext
+        const PasskeysContext = createContext({
+            showPasskeyPrompt: { value: false, importMode: false },
+            setShowPasskeyPrompt: () => {},
+            passkeyRegistrationComplete: undefined,
+            setPasskeyRegistrationComplete: () => {},
+            passkeyRegistrationError: undefined,
+            setPasskeyRegistrationError: () => {},
+        });
+
+        const usePasskeysContext = () => useContext(PasskeysContext);
+
+        // COPY OF CURRENT PasskeyModal component (updated manually when needed)
+        const PasskeyModal = ({ fqAppPrefix, getUserRegistration, uploadRegistration }) => {
+            const {
+                showPasskeyPrompt,
+                setShowPasskeyPrompt,
+                passkeyRegistrationComplete,
+                setPasskeyRegistrationComplete,
+                passkeyRegistrationError,
+                setPasskeyRegistrationError,
+            } = usePasskeysContext();
+
+            const [keypair, setKeypair] = useState();
+            const [id, setId] = useState();
+            const [files, setFiles] = useState([]);
+
+            // Mock dropzone
+            const getRootProps = () => ({
+                onClick: () => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.key';
+                    input.onchange = (e) => {
+                        if (e.target.files[0]) {
+                            setFiles([{ name: e.target.files[0].name }]);
+                        }
+                    };
+                    input.click();
+                }
+            });
+
+            const getInputProps = () => ({});
+            const acceptedFiles = files;
+
+            return (
+                <div
+                    className={
+                        'fixed top-0 left-0 backdrop-blur-lg transition ease-in-out duration-600 w-full h-full bg-black/40' +
+                        (showPasskeyPrompt.value ? '' : ' hidden')
+                    }
+                    style={{zIndex: 10000}}
+                >
+                    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-2rem)] max-w-[480px] max-h-[90vh] overflow-y-auto border border-gray-200 bg-white/90 backdrop-blur-md drop-shadow-2xl rounded-2xl text-gray-800 text-center">
+                        <h2 className="text-center p-4 font-semibold text-lg sm:text-xl text-gray-600">
+                            {showPasskeyPrompt.importMode
+                                ? 'Import Existing Key'
+                                : 'Create Passkey'}
+                        </h2>
+                        <div className="flex justify-center mb-4">
+                            <div
+                                style={{
+                                    fontSize: '23pt',
+                                    width: '60px',
+                                    height: '60px',
+                                    backgroundImage: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? 'url("passkey.png")' : undefined,
+                                    backgroundColor: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? '#0287F2' : undefined,
+                                    borderColor: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? '#0266CC' : undefined,
+                                }}
+                                className={
+                                    'relative z-100 font-bold transition ease-in-out duration-300 border border-gray-200 rounded-full p-2 flex items-center justify-center' +
+                                    (passkeyRegistrationComplete === true
+                                        ? ' bg-green-500 border-green-300 text-white'
+                                        : passkeyRegistrationComplete === false
+                                            ? ' bg-red-500 border-red-300 font-normal text-white'
+                                            : " bg-cover pulsating")
+                                }
+                            >
+                                {passkeyRegistrationComplete === true
+                                    ? '✓'
+                                    : passkeyRegistrationComplete === false
+                                        ? '!'
+                                        : ''}
+                            </div>
+                        </div>
+                        <div className="mb-4 mx-4 text-sm sm:text-base">
+                            {passkeyRegistrationComplete === false && passkeyRegistrationError ? (
+                                <>
+                                    <div>
+                                        An error was encountered while attempting to register the
+                                        passkey.
+                                    </div>
+                                    <div
+                                        className="border-gray-200 text-xs border bg-gray-50 p-4 mt-4 rounded-xl text-gray-700"
+                                        style={{
+                                            fontFamily:
+                                                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                                        }}
+                                    >
+                                        {passkeyRegistrationError}
+                                    </div>
+                                    <div className="mt-4">
+                                        If your browser told you the passkey option cannot be used with
+                                        the site, you may be running an unsupported browser. If the
+                                        browser provides an option to use a phone for passkeys, use
+                                        this. Alternatively, if you would like to proceed without
+                                        passkeys, click Proceed Without Passkeys.
+                                    </div>
+                                </>
+                            ) : passkeyRegistrationComplete === true ? (
+                                'Your passkey has been successfully created.'
+                            ) : id ? (
+                                'To save the account, you will need to perform one more passkey interaction. Tap continue to complete.'
+                            ) : showPasskeyPrompt.importMode ? (
+                                keypair ? (
+                                    "Use Passkeys to save your account, with the security of your own device's secure element. This will require two round-trips with your authenticator to complete to fully save the account."
+                                ) : (
+                                    'To begin, import your existing key file. Drop it in the area below or click on the area below to select the file.'
+                                )
+                            ) : (
+                                "Use Passkeys to access your account, with the security of your own device's secure element. This will require two round-trips with your authenticator to complete to fully register the account."
+                            )}
+                        </div>
+                        {showPasskeyPrompt.importMode &&
+                            !passkeyRegistrationComplete &&
+                            !keypair && (
+                                <div className="mb-4 mx-4">
+                                    <div
+                                        className="border-2 border-dashed border-gray-300 hover:border-blue-400 bg-gray-50/50 hover:bg-blue-50/50 p-2 rounded-md w-full truncate transition-all duration-200 cursor-pointer"
+                                        {...getRootProps()}
+                                    >
+                                        <input {...getInputProps()} style={{ display: 'none' }} />
+                                        <div className="text-center text-sm sm:text-base">
+                                            {acceptedFiles.length
+                                                ? acceptedFiles[0].name
+                                                : 'Drop key file here or click to select'}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        
+                        {/* Continue Button */}
+                        {showPasskeyPrompt.importMode ? (
+                            showPasskeyPrompt.importMode &&
+                            (acceptedFiles.length || passkeyRegistrationComplete) ? (
+                                <div
+                                    onClick={async () => {
+                                        if (passkeyRegistrationComplete) {
+                                            setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
+                                        } else {
+                                            // Mock registration
+                                            setPasskeyRegistrationComplete(true);
+                                            setTimeout(() => {
+                                                setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
+                                            }, 2000);
+                                        }
+                                    }}
+                                    style={{ backgroundColor: '#0287F2' }}
+                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#0266CC'}
+                                    onMouseLeave={(e) => e.target.style.backgroundColor = '#0287F2'}
+                                    className="hover:bg-blue-700 text-white transition ease-in-out duration-300 cursor-pointer rounded-xl px-4 py-2 border-0 mt-2 mb-4 mx-4 font-medium shadow-sm text-sm sm:text-base"
+                                >
+                                    Continue
+                                </div>
+                            ) : null
+                        ) : (
+                            <div
+                                onClick={async () => {
+                                    if (passkeyRegistrationComplete) {
+                                        setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
+                                    } else {
+                                        // Mock registration
+                                        setPasskeyRegistrationComplete(true);
+                                        setTimeout(() => {
+                                            setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
+                                        }, 2000);
+                                    }
+                                }}
+                                style={{ backgroundColor: '#0287F2' }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#0266CC'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = '#0287F2'}
+                                className="text-white transition ease-in-out duration-300 cursor-pointer rounded-xl px-4 py-2 border-0 mt-2 mb-4 mx-4 font-medium shadow-sm text-sm sm:text-base"
+                            >
+                                Continue
+                            </div>
+                        )}
+                        
+                        {/* Proceed Without Passkeys Button */}
+                        {passkeyRegistrationError &&
+                            (!showPasskeyPrompt.importMode || keypair) && (
+                                <div
+                                    onClick={async () => {
+                                        setPasskeyRegistrationComplete(true);
+                                        setPasskeyRegistrationError(undefined);
+                                        setTimeout(() => {
+                                            setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
+                                        }, 2000);
+                                    }}
+                                    className="bg-amber-600 hover:bg-amber-700 text-white transition ease-in-out duration-300 cursor-pointer rounded-xl px-4 py-2 border-0 mt-2 mb-4 mx-4 font-medium shadow-sm text-sm sm:text-base"
+                                >
+                                    Proceed Without Passkeys
+                                </div>
+                            )}
+                        
+                        {/* Cancel Button */}
+                        {!passkeyRegistrationComplete && (
+                            <div
+                                onClick={async () => {
+                                    setPasskeyRegistrationError(undefined);
+                                    setPasskeyRegistrationComplete(undefined);
+                                    setKeypair(undefined);
+                                    setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
+                                }}
+                                className="bg-gray-400 hover:bg-gray-500 text-white transition ease-in-out duration-300 cursor-pointer rounded-xl px-4 py-2 border-0 mt-2 mb-4 mx-4 font-medium shadow-sm text-sm sm:text-base"
+                            >
+                                Cancel
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // Test App Component
+        const TestApp = () => {
+            const [showPasskeyPrompt, setShowPasskeyPrompt] = useState({ value: false, importMode: false });
+            const [passkeyRegistrationComplete, setPasskeyRegistrationComplete] = useState(undefined);
+            const [passkeyRegistrationError, setPasskeyRegistrationError] = useState(undefined);
+
+            // Global functions for testing
+            window.showModal = (type) => {
+                setPasskeyRegistrationComplete(undefined);
+                setPasskeyRegistrationError(undefined);
+                
+                switch (type) {
+                    case 'create':
+                        setShowPasskeyPrompt({ value: true, importMode: false });
+                        break;
+                    case 'import':
+                        setShowPasskeyPrompt({ value: true, importMode: true });
+                        break;
+                    case 'success':
+                        setShowPasskeyPrompt({ value: true, importMode: false });
+                        setPasskeyRegistrationComplete(true);
+                        break;
+                    case 'error':
+                        setShowPasskeyPrompt({ value: true, importMode: false });
+                        setPasskeyRegistrationComplete(false);
+                        setPasskeyRegistrationError('Mock error: Passkey registration failed. This is a test error message to show how error states look in the modal.');
+                        break;
+                }
+            };
+
+            window.hideModal = () => {
+                setShowPasskeyPrompt({ value: false, importMode: false });
+            };
+
+            const contextValue = {
+                showPasskeyPrompt,
+                setShowPasskeyPrompt,
+                passkeyRegistrationComplete,
+                setPasskeyRegistrationComplete,
+                passkeyRegistrationError,
+                setPasskeyRegistrationError,
+            };
+
+            return (
+                <PasskeysContext.Provider value={contextValue}>
+                    <div style={{ padding: '20px', textAlign: 'center' }}>
+                        <h1 style={{ color: 'white', marginTop: '100px', fontSize: '2rem', fontWeight: 'bold' }}>
+                            PasskeyModal Style Test
+                        </h1>
+                        <p style={{ color: 'white', marginTop: '20px', fontSize: '1.2rem' }}>
+                            Use the control panel to test different modal states
+                        </p>
+                    </div>
+                    <PasskeyModal fqAppPrefix="TEST" />
+                </PasskeysContext.Provider>
+            );
+        };
+
+        ReactDOM.render(<TestApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
