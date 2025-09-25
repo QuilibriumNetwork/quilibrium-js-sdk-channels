@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build Test - PasskeyModal</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Include the built CSS -->
+    <link rel="stylesheet" href="../dist/index.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 10001;
+        }
+        
+        .control-panel h3 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .control-panel button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .control-panel button:hover {
+            background: #2563eb;
+        }
+
+        .build-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 300px;
+        }
+
+        .build-info h4 {
+            margin: 0 0 10px 0;
+            color: #4ade80;
+        }
+    </style>
+</head>
+<body>
+    <div class="control-panel">
+        <h3>🧪 Build Test</h3>
+        <button onclick="testImportModal()">Test Import Modal</button>
+        <button onclick="testCreateModal()">Test Create Modal</button>
+        <button onclick="testSuccessState()">Test Success State</button>
+        <button onclick="testErrorState()">Test Error State</button>
+        <button onclick="hideModal()">Hide Modal</button>
+    </div>
+
+    <div class="build-info">
+        <h4>Build Info</h4>
+        <div>✅ Using built CSS from dist/index.css</div>
+        <div>🎯 Testing for horizontal scroll fix</div>
+        <div>📱 Test on different screen sizes</div>
+        <div>⚡ Generated: 7/22/2025, 3:06:21 PM</div>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="module">
+        // Test modal using the actual built CSS
+        function createTestModal(state) {
+            const backdrop = document.createElement('div');
+            backdrop.className = 'passkey-modal-backdrop';
+            
+            const container = document.createElement('div');
+            container.className = 'passkey-modal-container';
+            
+            const header = document.createElement('h2');
+            header.className = 'passkey-modal-header';
+            header.textContent = state.importMode ? 'Import Existing Key' : 'Create Passkey';
+            
+            const iconWrapper = document.createElement('div');
+            iconWrapper.className = 'passkey-modal-icon-wrapper';
+            
+            const icon = document.createElement('div');
+            icon.className = 'passkey-modal-icon default pulsating';
+            if (state.success) {
+                icon.className = 'passkey-modal-icon success';
+                icon.textContent = '✓';
+            } else if (state.error) {
+                icon.className = 'passkey-modal-icon error';
+                icon.textContent = '!';
+            }
+            
+            const content = document.createElement('div');
+            content.className = 'passkey-modal-content';
+            
+            if (state.error) {
+                content.innerHTML = `
+                    <div>An error was encountered while attempting to register the passkey.</div>
+                    <div class="passkey-modal-error">Mock error: This is a test error message to verify styling works correctly in the built version. This should wrap properly without causing horizontal scrolling.</div>
+                    <div class="passkey-modal-mt-4">
+                        If your browser told you the passkey option cannot be used with the site, you may be running an unsupported browser.
+                    </div>
+                `;
+            } else if (state.success) {
+                content.textContent = 'Your passkey has been successfully created.';
+            } else if (state.importMode) {
+                content.textContent = 'To begin, import your existing key file. Drop it in the area below or click on the area below to select the file.';
+                
+                const dropzoneContainer = document.createElement('div');
+                dropzoneContainer.className = 'passkey-modal-content';
+                
+                const dropzone = document.createElement('div');
+                dropzone.className = 'passkey-modal-dropzone';
+                
+                const dropzoneText = document.createElement('div');
+                dropzoneText.className = 'passkey-modal-dropzone-text';
+                dropzoneText.textContent = 'Drop key file here or click to select';
+                
+                dropzone.appendChild(dropzoneText);
+                dropzoneContainer.appendChild(dropzone);
+                container.appendChild(dropzoneContainer);
+            } else {
+                content.textContent = "Use Passkeys to access your account, with the security of your own device's secure element. This will require two round-trips with your authenticator to complete to fully register the account.";
+            }
+            
+            const continueBtn = document.createElement('div');
+            continueBtn.className = 'passkey-modal-btn primary';
+            continueBtn.textContent = 'Continue';
+            continueBtn.onclick = () => document.body.removeChild(backdrop);
+            
+            const cancelBtn = document.createElement('div');
+            cancelBtn.className = 'passkey-modal-btn secondary';
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.onclick = () => document.body.removeChild(backdrop);
+            
+            if (state.error) {
+                const proceedBtn = document.createElement('div');
+                proceedBtn.className = 'passkey-modal-btn warning';
+                proceedBtn.textContent = 'Proceed Without Passkeys';
+                proceedBtn.onclick = () => document.body.removeChild(backdrop);
+                container.appendChild(proceedBtn);
+            }
+            
+            iconWrapper.appendChild(icon);
+            container.appendChild(header);
+            container.appendChild(iconWrapper);
+            container.appendChild(content);
+            
+            if (!state.success) {
+                container.appendChild(continueBtn);
+            }
+            container.appendChild(cancelBtn);
+            
+            backdrop.appendChild(container);
+            document.body.appendChild(backdrop);
+        }
+        
+        // Global test functions
+        window.testImportModal = () => createTestModal({ importMode: true });
+        window.testCreateModal = () => createTestModal({ importMode: false });
+        window.testSuccessState = () => createTestModal({ success: true });
+        window.testErrorState = () => createTestModal({ error: true });
+        window.hideModal = () => {
+            const backdrop = document.querySelector('.passkey-modal-backdrop');
+            if (backdrop) backdrop.remove();
+        };
+        
+        // Main content
+        document.getElementById('root').innerHTML = `
+            <div style="text-align: center; color: white; margin-top: 100px; padding: 20px;">
+                <h1 style="font-size: 2.5rem; margin-bottom: 20px;">🧪 Build Test</h1>
+                <h2 style="font-size: 1.5rem; margin-bottom: 30px;">PasskeyModal CSS Verification</h2>
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; max-width: 600px; margin: 0 auto;">
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;">
+                        ✅ This test uses the actual built CSS from <code>dist/index.css</code>
+                    </p>
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;">
+                        🎯 Verify that no horizontal scrolling occurs in any modal state
+                    </p>
+                    <p style="font-size: 1.1rem;">
+                        📱 Test on different screen sizes and devices
+                    </p>
+                </div>
+            </div>
+        `;
+        
+        // Auto-test: Show import modal after a delay
+        setTimeout(() => {
+            console.log('🚀 Auto-testing import modal...');
+            window.testImportModal();
+        }, 2000);
+    </script>
+</body>
+</html>
