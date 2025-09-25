@@ -458,9 +458,7 @@ export const PasskeyModal = ({
               }}
               className="passkey-modal-btn warning"
             >
-              {window.localStorage.getItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`)
-                ? 'Continue'
-                : 'Proceed Without Passkeys'}
+              Proceed Without Passkeys
             </div>
           )}
         {window.localStorage.getItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`) &&
