@@ -1,6 +1,6 @@
 {
   "name": "@quilibrium/quilibrium-js-sdk-channels",
-  "version": "2.1.0-preview",
+  "version": "2.1.0-1",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",

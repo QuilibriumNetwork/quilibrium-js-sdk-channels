@@ -547,24 +547,36 @@ export const SealSyncEnvelope = async (
   hub_address: string,
   hub_keyset: Ed448Keypair,
   owner_keyset: Ed448Keypair,
-  message: string
+  message: string,
+  configKey?: X448Keypair
 ) => {
-  const derived = await window.crypto.subtle.digest(
-    'SHA-512',
-    Buffer.from(new Uint8Array(hub_keyset.private_key))
-  );
-  const pub = Buffer.from(
-    JSON.parse(
-      ch.js_get_pubkey_x448(
-        Buffer.from(derived.slice(0, 56)).toString('base64')
+  // Use config key for encryption if provided, otherwise fall back to hub-derived key (legacy)
+  let encryptionPubKey: Uint8Array;
+  if (configKey) {
+    encryptionPubKey = new Uint8Array(configKey.public_key);
+    console.log('[SealSyncEnvelope] Using config key, pubKey length:', encryptionPubKey.length);
+  } else {
+    // Legacy: derive from hub key
+    console.log('[SealSyncEnvelope] WARNING: No config key provided, using hub-derived key (legacy)');
+    const derived = await window.crypto.subtle.digest(
+      'SHA-512',
+      Buffer.from(new Uint8Array(hub_keyset.private_key))
+    );
+    encryptionPubKey = new Uint8Array(
+      Buffer.from(
+        JSON.parse(
+          ch.js_get_pubkey_x448(
+            Buffer.from(derived.slice(0, 56)).toString('base64')
+          )
+        ),
+        'base64'
       )
-    ),
-    'base64'
-  );
+    );
+  }
   const ephemeral_key = JSON.parse(ch.js_generate_x448()) as X448Keypair;
   const input = ch.js_encrypt_inbox_message(
     JSON.stringify({
-      inbox_public_key: [...new Uint8Array(pub)],
+      inbox_public_key: [...encryptionPubKey],
       ephemeral_private_key: ephemeral_key.private_key,
       plaintext: [...new Uint8Array(Buffer.from(message, 'utf-8'))],
     } as SealedInboxMessageEncryptRequest)
@@ -596,18 +608,27 @@ export const SealSyncEnvelope = async (
 
 export const UnsealSyncEnvelope = async (
   hub_keyset: Ed448Keypair,
-  envelope: OwnerSealedMessage
+  envelope: OwnerSealedMessage,
+  configKey?: X448Keypair
 ) => {
-  const derived = await window.crypto.subtle.digest(
-    'SHA-512',
-    Buffer.from(new Uint8Array(hub_keyset.private_key))
-  );
+  // Use config key for decryption if provided, otherwise fall back to hub-derived key (legacy)
+  let decryptionPrivKey: Uint8Array;
+  if (configKey) {
+    decryptionPrivKey = new Uint8Array(configKey.private_key);
+    console.log('[UnsealSyncEnvelope] Using config key, privKey length:', decryptionPrivKey.length);
+  } else {
+    // Legacy: derive from hub key
+    console.log('[UnsealSyncEnvelope] WARNING: No config key provided, using hub-derived key (legacy)');
+    const derived = await window.crypto.subtle.digest(
+      'SHA-512',
+      Buffer.from(new Uint8Array(hub_keyset.private_key))
+    );
+    decryptionPrivKey = new Uint8Array(Buffer.from(derived.slice(0, 56)));
+  }
   const plaintext = JSON.parse(
     ch.js_decrypt_inbox_message(
       JSON.stringify({
-        inbox_private_key: [
-          ...new Uint8Array(Buffer.from(derived.slice(0, 56))),
-        ],
+        inbox_private_key: [...decryptionPrivKey],
         ephemeral_public_key: [
           ...new Uint8Array(Buffer.from(envelope.ephemeral_public_key, 'hex')),
         ],
@@ -661,28 +682,43 @@ export const SealInboxEnvelope = async (pubKey: string, message: string) => {
 export const SealHubEnvelope = async (
   address: string,
   keyset: Ed448Keypair,
-  message: string
+  message: string,
+  configKey?: X448Keypair
 ) => {
-  const derived = await window.crypto.subtle.digest(
-    'SHA-512',
-    Buffer.from(new Uint8Array(keyset.private_key))
-  );
-  const pub = Buffer.from(
-    JSON.parse(
-      ch.js_get_pubkey_x448(
-        Buffer.from(derived.slice(0, 56)).toString('base64')
+  // Use config key for encryption if provided, otherwise fall back to derived key for backwards compatibility
+  let encryptionPubKey: Uint8Array;
+  if (configKey) {
+    encryptionPubKey = new Uint8Array(configKey.public_key);
+    const privKeyBytes = new Uint8Array(configKey.private_key);
+    console.log('[SealHubEnvelope] Using config key, pubKey length:', encryptionPubKey.length, 'first 8 bytes:', Array.from(encryptionPubKey.slice(0, 8)), 'privKey first 8:', Array.from(privKeyBytes.slice(0, 8)));
+    console.log('[SealHubEnvelope] config pubKey hex prefix:', Buffer.from(encryptionPubKey.slice(0, 16)).toString('hex'));
+  } else {
+    // Legacy: derive X448 key from Ed448 hub key (deprecated)
+    const derived = await window.crypto.subtle.digest(
+      'SHA-512',
+      Buffer.from(new Uint8Array(keyset.private_key))
+    );
+    encryptionPubKey = new Uint8Array(
+      Buffer.from(
+        JSON.parse(
+          ch.js_get_pubkey_x448(
+            Buffer.from(derived.slice(0, 56)).toString('base64')
+          )
+        ),
+        'base64'
       )
-    ),
-    'base64'
-  );
+    );
+  }
   const ephemeral_key = JSON.parse(ch.js_generate_x448()) as X448Keypair;
+  console.log('[SealHubEnvelope] ephemeral pubKey hex:', Buffer.from(new Uint8Array(ephemeral_key.public_key)).toString('hex').substring(0, 32));
   const input = ch.js_encrypt_inbox_message(
     JSON.stringify({
-      inbox_public_key: [...new Uint8Array(pub)],
+      inbox_public_key: [...encryptionPubKey],
       ephemeral_private_key: ephemeral_key.private_key,
       plaintext: [...new Uint8Array(Buffer.from(message, 'utf-8'))],
     } as SealedInboxMessageEncryptRequest)
   );
+  console.log('[SealHubEnvelope] encrypt result:', input?.substring(0, 50) + '...');
   const signature = Buffer.from(
     JSON.parse(
       ch.js_sign_ed448(
@@ -707,25 +743,34 @@ export const SealHubEnvelope = async (
 
 export const UnsealHubEnvelope = async (
   keyset: Ed448Keypair,
-  envelope: HubSealedMessage
+  envelope: HubSealedMessage,
+  configKey?: X448Keypair
 ) => {
-  const derived = await window.crypto.subtle.digest(
-    'SHA-512',
-    Buffer.from(new Uint8Array(keyset.private_key))
-  );
-  const plaintext = JSON.parse(
-    ch.js_decrypt_inbox_message(
-      JSON.stringify({
-        inbox_private_key: [
-          ...new Uint8Array(Buffer.from(derived.slice(0, 56))),
-        ],
-        ephemeral_public_key: [
-          ...new Uint8Array(Buffer.from(envelope.ephemeral_public_key, 'hex')),
-        ],
-        ciphertext: JSON.parse(envelope.envelope),
-      } as SealedInboxMessageDecryptRequest)
-    )
-  );
+  // Use config key for decryption if provided, otherwise fall back to derived key for backwards compatibility
+  let decryptionPrivKey: Uint8Array;
+  if (configKey) {
+    decryptionPrivKey = new Uint8Array(configKey.private_key);
+    console.log('[UnsealHubEnvelope] Using config key, privKey length:', decryptionPrivKey.length, 'first 8 bytes:', Array.from(decryptionPrivKey.slice(0, 8)));
+    console.log('[UnsealHubEnvelope] ephemeral_public_key from envelope:', envelope.ephemeral_public_key?.substring(0, 32));
+  } else {
+    // Legacy: derive X448 key from Ed448 hub key (deprecated)
+    const derived = await window.crypto.subtle.digest(
+      'SHA-512',
+      Buffer.from(new Uint8Array(keyset.private_key))
+    );
+    decryptionPrivKey = new Uint8Array(Buffer.from(derived.slice(0, 56)));
+  }
+  const ephPubKey = new Uint8Array(Buffer.from(envelope.ephemeral_public_key, 'hex'));
+  console.log('[UnsealHubEnvelope] ephemeral pubKey bytes first 8:', Array.from(ephPubKey.slice(0, 8)));
+  const decryptInput = {
+    inbox_private_key: [...decryptionPrivKey],
+    ephemeral_public_key: [...ephPubKey],
+    ciphertext: JSON.parse(envelope.envelope),
+  };
+  console.log('[UnsealHubEnvelope] calling decrypt with inbox_private_key length:', decryptInput.inbox_private_key.length, 'ephemeral length:', decryptInput.ephemeral_public_key.length);
+  const decryptResult = ch.js_decrypt_inbox_message(JSON.stringify(decryptInput));
+  console.log('[UnsealHubEnvelope] decrypt result preview:', decryptResult?.substring(0, 80));
+  const plaintext = JSON.parse(decryptResult);
   return plaintext;
 };
 
