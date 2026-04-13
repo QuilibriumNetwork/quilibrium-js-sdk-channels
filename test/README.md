@@ -29,11 +29,12 @@ yarn test-build  # full build + serve
 Tests the real `PasskeyModal` component loaded from `dist/index.esm.js`.
 
 **Control panel:**
-- **Show Create Modal** -- opens the modal in new-account flow
-- **Show Import Modal** -- opens the modal in import flow (with .key file dropzone)
-- **Hide Modal** -- closes the modal
-- **Force Success State** -- injects success context values; no authenticator needed (UI-only test)
-- **Force Error State** -- injects error context values with a sample error message; no authenticator needed
+- **Show Create** -- opens the modal in new-account flow
+- **Show Import** -- opens the modal in import flow (with .key file dropzone)
+- **Force Success** -- injects success context values; no authenticator needed (UI-only test)
+- **Force Error** -- injects error context values with a sample error message; no authenticator needed
+
+Note: the modal renders a full-page overlay, so sidebar controls are only accessible before opening the modal. Use Force Success/Error before opening, or use the modal's own controls to dismiss it.
 
 **Status panel** shows live context values: visible, importMode, complete, error.
 
@@ -52,6 +53,8 @@ The modal's own buttons (Continue, Cancel, Proceed Without Passkeys) drive state
 ### `hook-test.html` -- usePasskeyFlow Hook Inspector
 
 Tests the `usePasskeyFlow` hook directly, without `PasskeyModal`. Useful for verifying the state machine in isolation.
+
+**State machine** visualizes the main flow steps (`idle` → `ready` → `registering` → `awaiting_completion` → `completing` → `success`) with branch steps (`importing`, `ready_with_keypair`, `fallback_registering`, `error`) shown inline when active. A WASM status indicator in the header and state machine bar shows whether the crypto backend loaded successfully.
 
 **State panel** shows all hook return values live: `step`, `error`, `address`, `isImportMode`, `isPasskeySupported`, `canRetry`.
 
@@ -73,7 +76,7 @@ Tests the `usePasskeyFlow` hook directly, without `PasskeyModal`. Useful for ver
 - **Built CSS**: `dist/index.css` (compiled with PostCSS) -- used by both test pages
 - **Built SDK**: `dist/index.esm.js` -- loaded as ES module, exposed as `window.__SDK__`
 
-Both pages use CDN React + Babel standalone for JSX -- no extra build dependencies.
+Both pages use CDN React + Babel standalone for JSX -- no extra build dependencies. WASM is initialized on load; if it fails, the SDK still loads but crypto actions will not work (indicated by a red status dot).
 
 ---
 

@@ -5,47 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PasskeyModal — Component Test</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Syne:wght@600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link rel="stylesheet" href="../dist/index.css">
   <style>
+    /*
+      Dark palette: burgundy-tinted darks per Quilibrium style guide.
+      Backgrounds are very dark shades derived from burgundy (#40001b),
+      not pure black or neutral grays.
+    */
     :root {
-      --bg:        #0a0a0b;
-      --bg-panel:  #111114;
-      --bg-raised: #18181d;
-      --border:    #2a2a35;
-      --border-hi: #3d3d50;
-      --text:      #e8e6f0;
-      --text-dim:  #6b6880;
-      --text-mid:  #9d9ab0;
-      --amber:     #f5a623;
-      --amber-dim: rgba(245,166,35,0.12);
-      --green:     #39d98a;
-      --green-dim: rgba(57,217,138,0.10);
-      --red:       #f25c5c;
-      --red-dim:   rgba(242,92,92,0.10);
-      --blue:      #6e8efb;
-      --mono:      'IBM Plex Mono', monospace;
-      --display:   'Syne', sans-serif;
+      --bg-page:      #110810;
+      --bg-surface:   #170d14;
+      --bg-raised:    #1e1219;
+      --bg-inset:     #231620;
+      --border:       rgba(255, 230, 240, 0.10);
+      --border-hi:    rgba(255, 230, 240, 0.18);
+      --border-subtle:rgba(255, 230, 240, 0.05);
+
+      --text:         #f0e9e4;
+      --text-2:       rgba(240, 233, 228, 0.75);
+      --text-3:       rgba(240, 233, 228, 0.50);
+      --text-4:       rgba(240, 233, 228, 0.35);
+
+      --pink:         #ff056d;
+      --pink-dim:     rgba(255, 5, 109, 0.10);
+      --green:        #34d97a;
+      --green-dim:    rgba(52, 217, 122, 0.10);
+      --red:          #f25c5c;
+      --red-dim:      rgba(242, 92, 92, 0.10);
+      --orange:       #ff8533;
+      --blue:         #4d9eff;
+
+      --sans:         'Inter', system-ui, -apple-system, sans-serif;
+      --code:         'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      --radius:       12px;
+      --radius-sm:    8px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: var(--mono);
-      background: var(--bg);
+      font-family: var(--sans);
+      font-size: 14px;
+      background: var(--bg-page);
       color: var(--text);
       min-height: 100vh;
-      /* scanline texture */
-      background-image: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(255,255,255,0.012) 2px,
-        rgba(255,255,255,0.012) 4px
-      );
+      -webkit-font-smoothing: antialiased;
     }
 
     /* ---- LOADING ---- */
@@ -55,25 +63,26 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      gap: 20px;
+      gap: 16px;
     }
     .loading-wordmark {
-      font-family: var(--display);
-      font-size: 1.1rem;
-      font-weight: 800;
-      letter-spacing: 0.15em;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--text-3);
     }
     .loading-bar-wrap {
-      width: 200px;
+      width: 160px;
       height: 2px;
       background: var(--border);
+      border-radius: 1px;
       overflow: hidden;
     }
     .loading-bar {
       height: 100%;
-      background: var(--amber);
+      background: var(--pink);
+      border-radius: 1px;
       animation: loadbar 1.8s ease-in-out infinite;
       transform-origin: left;
     }
@@ -83,32 +92,32 @@
       100% { transform: scaleX(1) translateX(110%); opacity: 0; }
     }
     .loading-label {
-      font-family: var(--mono);
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      letter-spacing: 0.05em;
+      font-family: var(--code);
+      font-size: 0.8125rem;
+      color: var(--text-3);
     }
     .loading-error {
-      font-family: var(--mono);
-      font-size: 0.72rem;
+      font-size: 0.9375rem;
       color: var(--red);
       text-align: center;
-      max-width: 340px;
-      line-height: 1.6;
+      max-width: 360px;
+      line-height: 1.5;
     }
     .loading-error code {
       display: block;
-      margin-top: 6px;
-      color: var(--text-mid);
+      margin-top: 8px;
+      font-family: var(--code);
+      font-size: 0.8125rem;
+      color: var(--text-2);
       background: var(--bg-raised);
-      padding: 6px 10px;
-      border-radius: 4px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
     }
 
     /* ---- LAYOUT ---- */
     .shell {
       display: grid;
-      grid-template-columns: 240px 1fr;
+      grid-template-columns: 250px 1fr;
       grid-template-rows: 52px 1fr;
       min-height: 100vh;
     }
@@ -118,16 +127,15 @@
       grid-column: 1 / -1;
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 0 24px;
+      gap: 14px;
+      padding: 0 28px;
       border-bottom: 1px solid var(--border);
-      background: var(--bg-panel);
+      background: var(--bg-surface);
     }
     .topbar-wordmark {
-      font-family: var(--display);
-      font-size: 0.9rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
+      font-size: 0.875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--text);
     }
@@ -137,19 +145,16 @@
       background: var(--border);
     }
     .topbar-title {
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      color: var(--text-dim);
-      letter-spacing: 0.06em;
+      font-size: 0.875rem;
+      color: var(--text-3);
     }
     .topbar-dot {
       margin-left: auto;
       display: flex;
       align-items: center;
       gap: 6px;
-      font-family: var(--mono);
-      font-size: 0.65rem;
-      color: var(--text-dim);
+      font-size: 0.8125rem;
+      color: var(--text-3);
     }
     .topbar-dot .dot {
       width: 6px;
@@ -157,17 +162,17 @@
       border-radius: 50%;
       background: var(--green);
       box-shadow: 0 0 6px var(--green);
-      animation: pulse 2s ease-in-out infinite;
+      animation: pulse 2.5s ease-in-out infinite;
     }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50%       { opacity: 0.4; }
+      50%       { opacity: 0.3; }
     }
 
     /* ---- SIDEBAR ---- */
     .sidebar {
       border-right: 1px solid var(--border);
-      background: var(--bg-panel);
+      background: var(--bg-surface);
       padding: 24px 0;
       display: flex;
       flex-direction: column;
@@ -176,7 +181,7 @@
     }
     .sidebar-section {
       padding: 0 16px 16px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border-subtle);
       margin-bottom: 16px;
     }
     .sidebar-section:last-child {
@@ -184,27 +189,27 @@
       margin-bottom: 0;
     }
     .sidebar-label {
-      font-family: var(--mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.12em;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--text-3);
       margin-bottom: 10px;
     }
     .sidebar-btn {
       display: block;
       width: 100%;
-      padding: 8px 12px;
+      padding: 9px 12px;
       margin-bottom: 5px;
       background: transparent;
       border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--text-mid);
-      font-family: var(--mono);
-      font-size: 0.72rem;
+      border-radius: var(--radius);
+      color: var(--text-2);
+      font-family: var(--sans);
+      font-size: 0.875rem;
       cursor: pointer;
       text-align: left;
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      transition: all 0.2s cubic-bezier(0, 0, 0.5, 1);
     }
     .sidebar-btn:last-child { margin-bottom: 0; }
     .sidebar-btn:hover {
@@ -213,7 +218,7 @@
       background: var(--bg-raised);
     }
     .sidebar-btn.btn-success {
-      border-color: rgba(57,217,138,0.25);
+      border-color: rgba(52, 217, 122, 0.2);
       color: var(--green);
     }
     .sidebar-btn.btn-success:hover {
@@ -221,7 +226,7 @@
       border-color: var(--green);
     }
     .sidebar-btn.btn-danger {
-      border-color: rgba(242,92,92,0.25);
+      border-color: rgba(242, 92, 92, 0.2);
       color: var(--red);
     }
     .sidebar-btn.btn-danger:hover {
@@ -231,23 +236,22 @@
 
     /* ---- STATUS READOUT ---- */
     .status-block {
-      padding: 12px;
-      background: var(--bg);
+      padding: 10px 12px;
+      background: var(--bg-page);
       border: 1px solid var(--border);
-      border-radius: 4px;
+      border-radius: var(--radius);
     }
     .status-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 4px 0;
-      font-family: var(--mono);
-      font-size: 0.65rem;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
+      padding: 5px 0;
+      font-size: 0.8125rem;
+      border-bottom: 1px solid var(--border-subtle);
     }
     .status-row:last-child { border-bottom: none; }
-    .status-key { color: var(--text-dim); }
-    .status-val { color: var(--text-mid); }
+    .status-key { color: var(--text-3); }
+    .status-val { color: var(--text-2); font-family: var(--code); font-size: 0.8125rem; }
     .status-val.true  { color: var(--green); }
     .status-val.false { color: var(--red); }
     .status-val.yes   { color: var(--red); }
@@ -258,21 +262,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px;
+      padding: 48px 40px;
       position: relative;
-      overflow: hidden;
-    }
-
-    /* grid pattern background */
-    .stage::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(110,142,251,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(110,142,251,0.04) 1px, transparent 1px);
-      background-size: 32px 32px;
-      pointer-events: none;
     }
 
     .stage-hero {
@@ -281,62 +272,61 @@
       z-index: 1;
     }
     .stage-hero-eyebrow {
-      font-family: var(--mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.15em;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 12px;
+      color: var(--text-3);
+      margin-bottom: 16px;
     }
     .stage-hero-title {
-      font-family: var(--display);
-      font-size: 2.4rem;
-      font-weight: 800;
+      font-size: 2.5rem;
+      font-weight: 700;
       letter-spacing: -0.02em;
       color: var(--text);
       line-height: 1;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
     .stage-hero-title span {
-      color: var(--amber);
+      color: var(--pink);
     }
     .stage-hero-sub {
-      font-family: var(--mono);
-      font-size: 0.75rem;
-      color: var(--text-dim);
+      font-size: 0.9375rem;
+      color: var(--text-3);
       line-height: 1.6;
-      max-width: 360px;
+      max-width: 400px;
       margin: 0 auto 32px;
     }
 
     .stage-instructions {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
       align-items: flex-start;
-      background: var(--bg-panel);
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 16px 20px;
-      font-family: var(--mono);
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      max-width: 400px;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      font-size: 0.875rem;
+      color: var(--text-3);
+      max-width: 440px;
       width: 100%;
     }
     .stage-instructions .step {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       align-items: flex-start;
       line-height: 1.5;
     }
     .stage-instructions .step-num {
-      color: var(--amber);
+      color: var(--pink);
+      font-weight: 600;
       flex-shrink: 0;
-      width: 14px;
+      width: 16px;
     }
+    .stage-instructions strong { color: var(--text-2); }
     .stage-instructions a {
-      color: var(--blue);
+      color: var(--pink);
       text-decoration: none;
     }
     .stage-instructions a:hover { text-decoration: underline; }
@@ -416,12 +406,6 @@
               >
                 Show Import
               </button>
-              <button
-                className="sidebar-btn"
-                onClick={() => setShowPasskeyPrompt({ value: false, importMode: false })}
-              >
-                Hide Modal
-              </button>
             </div>
 
             <div className="sidebar-section">
@@ -483,8 +467,8 @@
               <div className="topbar-sep" />
               <span className="topbar-title">passkey-modal / component test</span>
               <div className="topbar-dot">
-                <div className="dot" />
-                <span>dist/index.esm.js</span>
+                <div className="dot" style={window.__WASM_OK__ === false ? { background: 'var(--red)', boxShadow: '0 0 6px var(--red)' } : {}} />
+                <span>{window.__WASM_OK__ ? 'SDK + WASM ready' : window.__WASM_OK__ === false ? 'WASM failed' : 'SDK ready'}</span>
               </div>
             </header>
             <ControlPanel />
@@ -531,7 +515,17 @@
   </script>
   <script type="module">
     import('../dist/index.esm.js')
-      .then(sdk => { window.__SDK__ = sdk; })
+      .then(async sdk => {
+        // Initialize WASM before exposing SDK
+        try {
+          await sdk.channel_raw.default();
+          window.__WASM_OK__ = true;
+        } catch (e) {
+          console.warn('WASM init failed (crypto actions will not work):', e.message);
+          window.__WASM_OK__ = false;
+        }
+        window.__SDK__ = sdk;
+      })
       .catch(err => { console.error('SDK load failed:', err); window.__SDK_ERROR__ = true; });
   </script>
 </body>

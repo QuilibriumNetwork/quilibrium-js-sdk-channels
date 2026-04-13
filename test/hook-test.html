@@ -5,47 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>usePasskeyFlow — Hook Inspector</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Syne:wght@600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link rel="stylesheet" href="../dist/index.css">
   <style>
+    /*
+      Dark palette: burgundy-tinted darks per Quilibrium style guide.
+      Backgrounds are very dark shades derived from burgundy (#40001b),
+      not pure black or neutral grays.
+    */
     :root {
-      --bg:        #0a0a0b;
-      --bg-panel:  #0e0e12;
-      --bg-raised: #141419;
-      --border:    #1e1e28;
-      --border-hi: #32323f;
-      --text:      #e8e6f0;
-      --text-dim:  #55546a;
-      --text-mid:  #9691ab;
-      --amber:     #f5a623;
-      --amber-dim: rgba(245,166,35,0.08);
-      --green:     #39d98a;
-      --green-dim: rgba(57,217,138,0.08);
-      --red:       #f25c5c;
-      --red-dim:   rgba(242,92,92,0.08);
-      --blue:      #6e8efb;
-      --violet:    #a78bfa;
-      --mono:      'IBM Plex Mono', monospace;
-      --display:   'Syne', sans-serif;
+      --bg-page:      #110810;
+      --bg-surface:   #170d14;
+      --bg-raised:    #1e1219;
+      --bg-inset:     #231620;
+      --border:       rgba(255, 230, 240, 0.10);
+      --border-hi:    rgba(255, 230, 240, 0.18);
+      --border-subtle:rgba(255, 230, 240, 0.05);
+
+      --text:         #f0e9e4;
+      --text-2:       rgba(240, 233, 228, 0.75);
+      --text-3:       rgba(240, 233, 228, 0.50);
+      --text-4:       rgba(240, 233, 228, 0.35);
+
+      --pink:         #ff056d;
+      --pink-dim:     rgba(255, 5, 109, 0.10);
+      --green:        #34d97a;
+      --green-dim:    rgba(52, 217, 122, 0.10);
+      --red:          #f25c5c;
+      --red-dim:      rgba(242, 92, 92, 0.10);
+      --orange:       #ff8533;
+      --orange-dim:   rgba(255, 133, 51, 0.08);
+      --blue:         #4d9eff;
+      --purple:       #9b6dff;
+
+      --sans:         'Inter', system-ui, -apple-system, sans-serif;
+      --code:         'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      --radius:       12px;
+      --radius-sm:    8px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: var(--mono);
-      background: var(--bg);
+      font-family: var(--sans);
+      font-size: 14px;
+      background: var(--bg-page);
       color: var(--text);
       min-height: 100vh;
-      background-image: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(255,255,255,0.008) 2px,
-        rgba(255,255,255,0.008) 4px
-      );
+      -webkit-font-smoothing: antialiased;
     }
 
     /* ---- LOADING ---- */
@@ -55,25 +65,26 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      gap: 20px;
+      gap: 16px;
     }
     .loading-wordmark {
-      font-family: var(--display);
-      font-size: 1rem;
-      font-weight: 800;
-      letter-spacing: 0.15em;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--text-3);
     }
     .loading-bar-wrap {
-      width: 200px;
+      width: 160px;
       height: 2px;
       background: var(--border);
+      border-radius: 1px;
       overflow: hidden;
     }
     .loading-bar {
       height: 100%;
-      background: var(--amber);
+      background: var(--pink);
+      border-radius: 1px;
       animation: loadbar 1.8s ease-in-out infinite;
       transform-origin: left;
     }
@@ -83,24 +94,26 @@
       100% { transform: scaleX(1) translateX(110%); opacity: 0; }
     }
     .loading-label {
-      font-size: 0.68rem;
-      color: var(--text-dim);
-      letter-spacing: 0.05em;
+      font-family: var(--code);
+      font-size: 0.8125rem;
+      color: var(--text-3);
     }
     .loading-error {
-      font-size: 0.72rem;
+      font-size: 0.9375rem;
       color: var(--red);
       text-align: center;
-      max-width: 340px;
-      line-height: 1.6;
+      max-width: 360px;
+      line-height: 1.5;
     }
     .loading-error code {
       display: block;
-      margin-top: 6px;
-      color: var(--text-mid);
+      margin-top: 8px;
+      font-family: var(--code);
+      font-size: 0.8125rem;
+      color: var(--text-2);
       background: var(--bg-raised);
-      padding: 6px 10px;
-      border-radius: 4px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
     }
 
     /* ---- SHELL ---- */
@@ -114,58 +127,58 @@
     .topbar {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 0 24px;
+      gap: 14px;
+      padding: 0 28px;
       border-bottom: 1px solid var(--border);
-      background: var(--bg-panel);
+      background: var(--bg-surface);
       position: sticky;
       top: 0;
       z-index: 100;
     }
     .topbar-wordmark {
-      font-family: var(--display);
-      font-size: 0.88rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
+      font-size: 0.875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--text);
     }
     .topbar-sep { width: 1px; height: 18px; background: var(--border); }
     .topbar-title {
-      font-size: 0.72rem;
-      color: var(--text-dim);
-      letter-spacing: 0.05em;
+      font-size: 0.875rem;
+      color: var(--text-3);
     }
     .topbar-right {
       margin-left: auto;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
     .topbar-link {
-      font-size: 0.65rem;
-      color: var(--text-dim);
+      font-size: 0.8125rem;
+      color: var(--pink);
       text-decoration: none;
-      letter-spacing: 0.05em;
-      padding: 4px 8px;
+      padding: 5px 14px;
       border: 1px solid var(--border);
-      border-radius: 3px;
-      transition: color 0.15s, border-color 0.15s;
+      border-radius: var(--radius);
+      transition: all 0.2s;
     }
-    .topbar-link:hover { color: var(--text); border-color: var(--border-hi); }
+    .topbar-link:hover {
+      border-color: rgba(255, 5, 109, 0.3);
+      background: var(--pink-dim);
+    }
     .topbar-dot {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.65rem;
-      color: var(--text-dim);
+      font-size: 0.8125rem;
+      color: var(--text-3);
     }
     .dot {
       width: 6px; height: 6px;
       border-radius: 50%;
       background: var(--green);
       box-shadow: 0 0 6px var(--green);
-      animation: pulse 2s ease-in-out infinite;
+      animation: pulse 2.5s ease-in-out infinite;
     }
     @keyframes pulse {
       0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
@@ -188,21 +201,22 @@
       grid-column: 1 / -1;
       margin-bottom: 24px;
     }
-    .machine-label {
-      font-size: 0.6rem;
-      letter-spacing: 0.12em;
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--text-3);
       margin-bottom: 10px;
     }
     .machine {
       display: flex;
       align-items: center;
       gap: 0;
-      background: var(--bg-panel);
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 14px 20px;
+      border-radius: var(--radius);
+      padding: 18px 24px;
       overflow-x: auto;
     }
     .machine-step {
@@ -215,7 +229,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       cursor: default;
     }
     .machine-node-dot {
@@ -223,46 +237,35 @@
       height: 10px;
       border-radius: 50%;
       background: var(--border-hi);
-      border: 2px solid var(--border-hi);
-      transition: all 0.25s;
+      transition: all 0.3s cubic-bezier(0, 0, 0.5, 1);
       flex-shrink: 0;
     }
     .machine-node-label {
-      font-size: 0.58rem;
-      color: var(--text-dim);
-      letter-spacing: 0.04em;
+      font-size: 0.8125rem;
+      color: var(--text-4);
       white-space: nowrap;
-      transition: color 0.25s;
+      transition: color 0.3s cubic-bezier(0, 0, 0.5, 1);
     }
     .machine-node.active .machine-node-dot {
-      background: var(--amber);
-      border-color: var(--amber);
-      box-shadow: 0 0 10px var(--amber), 0 0 20px rgba(245,166,35,0.3);
+      background: var(--pink);
+      box-shadow: 0 0 12px rgba(255, 5, 109, 0.4);
     }
-    .machine-node.active .machine-node-label {
-      color: var(--amber);
-    }
-    .machine-node.done .machine-node-dot {
-      background: var(--green);
-      border-color: var(--green);
-    }
-    .machine-node.done .machine-node-label {
-      color: var(--green);
-    }
+    .machine-node.active .machine-node-label { color: var(--pink); font-weight: 500; }
+    .machine-node.done .machine-node-dot { background: var(--green); }
+    .machine-node.done .machine-node-label { color: var(--green); }
     .machine-node.error-node .machine-node-dot {
       background: var(--red);
-      border-color: var(--red);
-      box-shadow: 0 0 8px var(--red);
+      box-shadow: 0 0 10px rgba(242, 92, 92, 0.4);
     }
     .machine-node.error-node .machine-node-label { color: var(--red); }
     .machine-edge {
-      width: 32px;
-      height: 2px;
+      width: 36px;
+      height: 1px;
       background: var(--border);
       flex-shrink: 0;
       position: relative;
-      top: -8px;
-      transition: background 0.25s;
+      top: -9px;
+      transition: background 0.3s;
     }
     .machine-edge.lit { background: var(--green); }
 
@@ -276,61 +279,63 @@
 
     /* ---- PANELS ---- */
     .panel {
-      background: var(--bg-panel);
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius);
       overflow: hidden;
     }
     .panel-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
     }
     .panel-title {
-      font-size: 0.62rem;
-      letter-spacing: 0.1em;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--text-3);
     }
-    .panel-body { padding: 14px; }
 
     /* ---- STATE ROWS ---- */
     .state-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 1px;
-      background: var(--border);
+      background: var(--border-subtle);
     }
     .state-cell {
       background: var(--bg-raised);
-      padding: 10px 12px;
+      padding: 12px 14px;
     }
     .state-cell-key {
-      font-size: 0.62rem;
-      color: var(--text-dim);
-      letter-spacing: 0.04em;
+      font-family: var(--code);
+      font-size: 0.8125rem;
+      color: var(--text-3);
       margin-bottom: 4px;
     }
     .state-cell-val {
-      font-size: 0.8rem;
+      font-family: var(--code);
+      font-size: 0.9375rem;
       font-weight: 500;
-      color: var(--text-mid);
+      color: var(--text-2);
       word-break: break-all;
     }
-    .state-cell-val.v-step   { color: var(--amber); }
-    .state-cell-val.v-null   { color: var(--text-dim); font-style: italic; font-size: 0.7rem; }
+    .state-cell-val.v-step   { color: var(--pink); }
+    .state-cell-val.v-null   { color: var(--text-4); font-style: italic; }
     .state-cell-val.v-true   { color: var(--green); }
     .state-cell-val.v-false  { color: var(--red); }
-    .state-cell-val.v-error  { color: var(--red); font-size: 0.68rem; }
-    .state-cell-val.v-addr   { color: var(--blue); font-size: 0.68rem; }
+    .state-cell-val.v-error  { color: var(--red); font-size: 0.875rem; }
+    .state-cell-val.v-addr   { color: var(--blue); font-size: 0.875rem; }
 
     /* ---- LOG ---- */
     .log-list {
-      font-size: 0.68rem;
-      line-height: 1.5;
-      max-height: 220px;
+      font-family: var(--code);
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      max-height: 240px;
       overflow-y: auto;
       padding: 4px 0;
     }
@@ -339,34 +344,34 @@
     .log-list::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
     .log-row {
       display: flex;
-      gap: 10px;
-      padding: 3px 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.025);
-      transition: background 0.1s;
+      gap: 12px;
+      padding: 5px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background 0.15s;
     }
     .log-row:last-child { border-bottom: none; }
     .log-row:hover { background: var(--bg-raised); }
-    .log-ts { color: var(--text-dim); flex-shrink: 0; }
+    .log-ts { color: var(--text-4); flex-shrink: 0; }
     .log-msg.step-change { color: var(--blue); }
     .log-msg.err         { color: var(--red); }
     .log-msg.ok          { color: var(--green); }
-    .log-msg.default     { color: var(--text-mid); }
-    .log-empty { padding: 16px 14px; color: var(--text-dim); font-size: 0.68rem; font-style: italic; }
+    .log-msg.default     { color: var(--text-2); }
+    .log-empty { padding: 20px 16px; color: var(--text-3); font-size: 0.875rem; font-style: italic; }
 
     /* ---- NOTICE ---- */
     .notice {
       display: flex;
       gap: 10px;
       align-items: flex-start;
-      background: rgba(245,166,35,0.06);
-      border: 1px solid rgba(245,166,35,0.2);
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 0.68rem;
-      color: rgba(245,166,35,0.8);
-      line-height: 1.55;
+      background: var(--orange-dim);
+      border: 1px solid rgba(255, 133, 51, 0.18);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 0.875rem;
+      color: var(--orange);
+      line-height: 1.5;
     }
-    .notice-icon { flex-shrink: 0; opacity: 0.7; margin-top: 1px; }
+    .notice-icon { flex-shrink: 0; opacity: 0.8; margin-top: 2px; }
 
     /* ---- RIGHT COL (ACTIONS) ---- */
     .right-col {
@@ -379,22 +384,22 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
-      padding: 10px;
+      padding: 12px;
     }
     .action-btn {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 9px 12px;
+      padding: 10px 12px;
       background: transparent;
       border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--text-mid);
-      font-family: var(--mono);
-      font-size: 0.7rem;
+      border-radius: var(--radius);
+      color: var(--text-2);
+      font-family: var(--sans);
+      font-size: 0.875rem;
       cursor: pointer;
       text-align: left;
-      transition: all 0.15s;
+      transition: all 0.2s cubic-bezier(0, 0, 0.5, 1);
       width: 100%;
     }
     .action-btn:hover:not(:disabled) {
@@ -403,38 +408,38 @@
       background: var(--bg-raised);
     }
     .action-btn:disabled {
-      opacity: 0.3;
+      opacity: 0.28;
       cursor: not-allowed;
     }
     .action-btn .btn-accent {
       width: 3px;
-      height: 14px;
+      height: 16px;
       border-radius: 2px;
       flex-shrink: 0;
     }
-    .ab-primary .btn-accent  { background: var(--blue); }
+    .ab-primary .btn-accent  { background: var(--pink); }
     .ab-success .btn-accent  { background: var(--green); }
-    .ab-warning .btn-accent  { background: var(--amber); }
-    .ab-violet  .btn-accent  { background: var(--violet); }
-    .ab-neutral .btn-accent  { background: var(--text-dim); }
+    .ab-warning .btn-accent  { background: var(--orange); }
+    .ab-violet  .btn-accent  { background: var(--purple); }
+    .ab-neutral .btn-accent  { background: var(--text-4); }
     .ab-danger  .btn-accent  { background: var(--red); }
 
-    .ab-primary:hover:not(:disabled) { border-color: rgba(110,142,251,0.4); }
-    .ab-success:hover:not(:disabled) { border-color: rgba(57,217,138,0.4); }
-    .ab-warning:hover:not(:disabled) { border-color: rgba(245,166,35,0.4); }
-    .ab-violet:hover:not(:disabled)  { border-color: rgba(167,139,250,0.4); }
+    .ab-primary:hover:not(:disabled) { border-color: rgba(255, 5, 109, 0.3); }
+    .ab-success:hover:not(:disabled) { border-color: rgba(52, 217, 122, 0.3); }
+    .ab-warning:hover:not(:disabled) { border-color: rgba(255, 133, 51, 0.3); }
+    .ab-violet:hover:not(:disabled)  { border-color: rgba(155, 109, 255, 0.3); }
 
-    .action-btn-label { flex: 1; }
-    .action-btn-hint  { font-size: 0.6rem; color: var(--text-dim); margin-top: 1px; }
+    .action-btn-label { flex: 1; font-family: var(--code); font-size: 0.8125rem; }
+    .action-btn-hint  { font-size: 0.8125rem; color: var(--text-4); margin-top: 2px; }
 
     .action-divider {
       height: 1px;
-      background: var(--border);
+      background: var(--border-subtle);
       margin: 4px 0;
     }
 
-    .action-btn.ab-danger { color: var(--red); opacity: 0.6; }
-    .action-btn.ab-danger:hover { opacity: 1; border-color: rgba(242,92,92,0.4); background: var(--red-dim); }
+    .action-btn.ab-danger { color: var(--red); opacity: 0.55; }
+    .action-btn.ab-danger:hover { opacity: 1; border-color: rgba(242, 92, 92, 0.3); background: var(--red-dim); }
   </style>
 </head>
 <body>
@@ -443,7 +448,9 @@
   <script type="text/babel">
     const { useState, useEffect, useCallback, useRef } = React;
 
-    const STEPS = ['idle', 'initializing', 'awaiting_passkey', 'awaiting_completion', 'uploading', 'complete'];
+    // These must match PasskeyFlowStep from src/hooks/usePasskeyFlow.ts exactly
+    const STEPS = ['idle', 'ready', 'registering', 'awaiting_completion', 'completing', 'success'];
+    // Branching steps shown separately: importing, ready_with_keypair, fallback_registering, error
 
     const LoadingScreen = ({ error }) => (
       <div className="loading-screen">
@@ -462,21 +469,43 @@
       </div>
     );
 
-    const StepMachine = ({ currentStep }) => {
-      const stepIdx = STEPS.indexOf(currentStep);
+    // Maps branch steps to the main-track position they relate to
+    const BRANCH_MAP = {
+      importing:             1, // branches from ready
+      ready_with_keypair:    1, // variant of ready (after import)
+      fallback_registering:  2, // alternative to registering
+    };
+
+    const StepMachine = ({ currentStep, wasmOk }) => {
+      const isMainStep = STEPS.includes(currentStep);
+      const stepIdx = isMainStep ? STEPS.indexOf(currentStep) : (BRANCH_MAP[currentStep] ?? -1);
+      const isError = currentStep === 'error';
+      const isBranch = !isMainStep && !isError;
+
       return (
         <div className="machine-wrap">
-          <div className="machine-label">State machine</div>
+          <div className="section-label" style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <span>State machine</span>
+            <span style={{
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              letterSpacing: '0.04em',
+              color: wasmOk ? 'var(--green)' : wasmOk === false ? 'var(--red)' : 'var(--text-4)',
+            }}>
+              {wasmOk ? 'WASM ready' : wasmOk === false ? 'WASM failed' : 'WASM loading'}
+            </span>
+          </div>
           <div className="machine">
             {STEPS.map((step, i) => {
-              const isActive = step === currentStep;
-              const isDone = stepIdx > i && stepIdx !== -1;
-              const isError = currentStep === 'error';
+              const isActive = step === currentStep || (isBranch && i === stepIdx);
+              const isDone = stepIdx > i && stepIdx !== -1 && !isError;
               return (
                 <div className="machine-step" key={step}>
-                  <div className={`machine-node ${isActive ? 'active' : ''} ${isDone ? 'done' : ''} ${isActive && isError ? 'error-node' : ''}`}>
+                  <div className={`machine-node ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}`}>
                     <div className="machine-node-dot" />
-                    <div className="machine-node-label">{step}</div>
+                    <div className="machine-node-label">
+                      {isBranch && i === stepIdx ? currentStep : step}
+                    </div>
                   </div>
                   {i < STEPS.length - 1 && (
                     <div className={`machine-edge ${isDone ? 'lit' : ''}`} />
@@ -484,7 +513,7 @@
                 </div>
               );
             })}
-            {currentStep === 'error' && (
+            {isError && (
               <>
                 <div className="machine-edge" />
                 <div className="machine-node error-node">
@@ -529,10 +558,12 @@
 
       if (!sdkReady) return <LoadingScreen error={sdkError} />;
 
-      const { PasskeysProvider, usePasskeyFlow } = window.__SDK__;
+      const { PasskeysProvider } = window.__SDK__;
 
       const FlowTester = () => {
         const fileInputRef = useRef(null);
+        const { usePasskeyFlow, usePasskeysContext } = window.__SDK__;
+        const { setShowPasskeyPrompt, showPasskeyPrompt } = usePasskeysContext();
 
         const mockGetUserRegistration = useCallback(async (address) => {
           addLog('ok', `getUserRegistration(${address.slice(0,10)}...)`);
@@ -543,11 +574,21 @@
           addLog('ok', `uploadRegistration(${address.slice(0,10)}...)`);
         }, []);
 
+        // Ensure the passkey prompt is open so computedStep doesn't snap to idle.
+        // Returns a promise that resolves after React processes the state update.
+        const ensureOpen = useCallback((importMode) => {
+          return new Promise(resolve => {
+            setShowPasskeyPrompt({ value: true, importMode: importMode ?? false });
+            // Wait one frame for React to re-render with the new state
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+          });
+        }, [setShowPasskeyPrompt]);
+
         const hook = usePasskeyFlow({
           fqAppPrefix: 'HOOK-TEST',
           getUserRegistration: mockGetUserRegistration,
           uploadRegistration: mockUploadRegistration,
-          onStepChange: (step) => addLog('step-change', `step -> ${step}`),
+          onStepChange: (step) => addLog('step-change', `step \u2192 ${step}`),
           onComplete:   ()     => addLog('ok', 'onComplete fired'),
           onError:      (err)  => addLog('err', `onError: ${err.code}${err.rawMessage ? ' / ' + err.rawMessage : ''}`),
           onCancel:     ()     => addLog('ok', 'onCancel fired'),
@@ -576,18 +617,19 @@
         };
 
         const stateFields = [
-          ['step',           hook.step],
+          ['step',              hook.step],
+          ['promptActive',      showPasskeyPrompt.value],
           ['isPasskeySupported', hook.isPasskeySupported],
-          ['isImportMode',   hook.isImportMode],
-          ['canRetry',       hook.canRetry],
-          ['error.code',     hook.error?.code ?? null],
-          ['error.rawMessage', hook.error?.rawMessage ?? null],
-          ['address',        hook.address ?? null],
+          ['isImportMode',      hook.isImportMode],
+          ['canRetry',          hook.canRetry],
+          ['error.code',        hook.error?.code ?? null],
+          ['error.rawMessage',  hook.error?.rawMessage ?? null],
+          ['address',           hook.address ?? null],
         ];
 
         return (
           <div className="main">
-            <StepMachine currentStep={hook.step} />
+            <StepMachine currentStep={hook.step} wasmOk={window.__WASM_OK__} />
 
             <div className="left-col">
               <div className="panel">
@@ -607,8 +649,10 @@
               <div className="notice">
                 <span className="notice-icon">!</span>
                 <span>
-                  startRegistration and completeRegistration trigger a real WebAuthn prompt.
-                  Must be on localhost or HTTPS.
+                  This is a two-step flow. <strong>startRegistration</strong> creates
+                  a passkey credential (first browser prompt), then <strong>completeRegistration</strong> writes
+                  the encryption key into it (second prompt). Both require localhost or HTTPS.
+                  {!window.__WASM_OK__ && ' WASM is not loaded, so crypto actions will fail.'}
                 </span>
               </div>
 
@@ -616,11 +660,13 @@
                 <div className="panel-header">
                   <span className="panel-title">Event log</span>
                   <button
-                    onClick={() => setLog([])}
+                    onClick={() => { setLog([]); }}
                     style={{
-                      background: 'none', border: 'none', color: 'var(--text-dim)',
-                      font: 'inherit', fontSize: '0.6rem', cursor: 'pointer',
-                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      background: 'var(--bg-raised)', border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)', color: 'var(--text-3)',
+                      fontFamily: 'var(--sans)', fontSize: '0.75rem', cursor: 'pointer',
+                      letterSpacing: '0.04em', textTransform: 'uppercase',
+                      fontWeight: 600, padding: '4px 10px',
                     }}
                   >
                     clear
@@ -647,10 +693,11 @@
                   <span className="panel-title">Actions</span>
                 </div>
                 <div className="action-list">
-                  <button className="action-btn ab-primary" onClick={() => hook.startRegistration()}>
+                  <button className="action-btn ab-primary" onClick={async () => { await ensureOpen(false); hook.startRegistration(); }}>
                     <div className="btn-accent" />
                     <div>
                       <div className="action-btn-label">startRegistration()</div>
+                      <div className="action-btn-hint">Step 1: creates passkey credential</div>
                     </div>
                   </button>
                   <button
@@ -661,16 +708,22 @@
                     <div className="btn-accent" />
                     <div>
                       <div className="action-btn-label">completeRegistration()</div>
-                      <div className="action-btn-hint">requires: awaiting_completion</div>
+                      <div className="action-btn-hint">Step 2: writes key into passkey (requires: awaiting_completion)</div>
                     </div>
                   </button>
-                  <button className="action-btn ab-warning" onClick={() => hook.proceedWithoutPasskey()}>
+                  <button className="action-btn ab-warning" onClick={async () => { await ensureOpen(false); hook.proceedWithoutPasskey(); }}>
                     <div className="btn-accent" />
-                    <div className="action-btn-label">proceedWithoutPasskey()</div>
+                    <div>
+                      <div className="action-btn-label">proceedWithoutPasskey()</div>
+                      <div className="action-btn-hint">Fallback: stores key in IndexedDB instead</div>
+                    </div>
                   </button>
-                  <button className="action-btn ab-violet" onClick={() => fileInputRef.current?.click()}>
+                  <button className="action-btn ab-violet" onClick={async () => { await ensureOpen(true); fileInputRef.current?.click(); }}>
                     <div className="btn-accent" />
-                    <div className="action-btn-label">importKeyFile()</div>
+                    <div>
+                      <div className="action-btn-label">importKeyFile()</div>
+                      <div className="action-btn-hint">Import a .key file, then startRegistration</div>
+                    </div>
                   </button>
                   <input
                     ref={fileInputRef}
@@ -704,20 +757,20 @@
 
               <div className="panel">
                 <div className="panel-header"><span className="panel-title">Navigation</span></div>
-                <div style={{ padding: '10px' }}>
+                <div style={{ padding: '12px' }}>
                   <a
                     href="index.html"
+                    className="action-btn ab-primary"
                     style={{
-                      display: 'block', padding: '9px 12px',
-                      background: 'var(--bg-raised)', border: '1px solid var(--border)',
-                      borderRadius: '4px', color: 'var(--text-mid)',
-                      textDecoration: 'none', fontSize: '0.7rem',
-                      transition: 'border-color 0.15s, color 0.15s',
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
-                    onMouseOver={e => { e.target.style.borderColor='var(--border-hi)'; e.target.style.color='var(--text)'; }}
-                    onMouseOut={e => { e.target.style.borderColor='var(--border)'; e.target.style.color='var(--text-mid)'; }}
                   >
-                    PasskeyModal test &rarr;
+                    <div className="btn-accent" />
+                    <span className="action-btn-label" style={{ fontFamily: 'var(--sans)' }}>PasskeyModal test</span>
+                    <span style={{ color: 'var(--text-4)', fontSize: '0.875rem' }}>&rarr;</span>
                   </a>
                 </div>
               </div>
@@ -736,8 +789,8 @@
               <div className="topbar-right">
                 <a className="topbar-link" href="index.html">modal test</a>
                 <div className="topbar-dot">
-                  <div className="dot" />
-                  <span>dist/index.esm.js</span>
+                  <div className="dot" style={window.__WASM_OK__ === false ? { background: 'var(--red)', boxShadow: '0 0 6px var(--red)' } : {}} />
+                  <span>{window.__WASM_OK__ ? 'SDK + WASM ready' : window.__WASM_OK__ === false ? 'WASM failed' : 'SDK ready'}</span>
                 </div>
               </div>
             </header>
@@ -764,7 +817,16 @@
   </script>
   <script type="module">
     import('../dist/index.esm.js')
-      .then(sdk => { window.__SDK__ = sdk; })
+      .then(async sdk => {
+        try {
+          await sdk.channel_raw.default();
+          window.__WASM_OK__ = true;
+        } catch (e) {
+          console.warn('WASM init failed (crypto actions will not work):', e.message);
+          window.__WASM_OK__ = false;
+        }
+        window.__SDK__ = sdk;
+      })
       .catch(err => { console.error('SDK load failed:', err); window.__SDK_ERROR__ = true; });
   </script>
 </body>

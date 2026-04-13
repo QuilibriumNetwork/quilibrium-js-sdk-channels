@@ -7,7 +7,7 @@
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c && cp src/wasm/channelwasm_bg.wasm dist/channelwasm_bg.wasm",
     "dev": "rollup -c -w",
     "clean": "rimraf dist",
     "test": "node test/serve.js",
