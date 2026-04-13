@@ -482,10 +482,15 @@
                 </p>
                 <div className="stage-instructions">
                   <div className="step"><span className="step-num">1</span><span>Click <strong>Show Create</strong> or <strong>Show Import</strong> to open the modal</span></div>
-                  <div className="step"><span className="step-num">2</span><span>Continue triggers a real WebAuthn prompt (localhost or HTTPS required)</span></div>
-                  <div className="step"><span className="step-num">3</span><span>Use <strong>Force Success / Error</strong> to test UI states without an authenticator</span></div>
-                  <div className="step"><span className="step-num">4</span><span>Also open <a href="hook-test.html">hook-test.html</a> to inspect the state machine directly</span></div>
+                  <div className="step"><span className="step-num">2</span><span>Use <strong>Force Success / Error</strong> to test all visual states without a real authenticator</span></div>
+                  <div className="step"><span className="step-num">3</span><span>The modal's own buttons (Continue, Cancel) drive real state, but WebAuthn requires HTTPS and a platform authenticator</span></div>
+                  <div className="step"><span className="step-num">4</span><span><a href="hook-test.html">Hook inspector</a> shows the state machine directly</span></div>
                 </div>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-4)', marginTop: 16, maxWidth: 440, lineHeight: 1.5 }}>
+                  This test page loads the real SDK from dist/ but runs outside a proper
+                  bundler. End-to-end passkey flows require HTTPS and a platform authenticator.
+                  Force Success/Error are the recommended way to verify modal UI states here.
+                </p>
               </div>
             </main>
           </div>

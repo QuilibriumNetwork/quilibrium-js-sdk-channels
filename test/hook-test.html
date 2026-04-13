@@ -623,11 +623,17 @@
             <div className="notice">
               <span className="notice-icon">!</span>
               <span>
-                This is a two-step flow. <strong>startRegistration</strong> creates
-                a passkey credential (first browser prompt), then <strong>completeRegistration</strong> writes
-                the encryption key into it (second prompt). Both require localhost or HTTPS.
-                WebAuthn may not work on <code>http://localhost</code> on Windows without Windows Hello.
-                Use <strong>proceedWithoutPasskey</strong> to test the fallback path.
+                <strong>Limitations of this test page:</strong> The SDK is designed to be consumed
+                by a bundler (webpack, Vite), not loaded directly in the browser. The Node.js{' '}
+                <code>crypto</code> module is shimmed via a CDN polyfill that does not fully work,
+                so actions that involve address derivation will fail with a "Class constructor"
+                error. WebAuthn also requires HTTPS or a configured platform authenticator.
+                <br /><br />
+                <strong>What works here:</strong> WASM loading, key generation, state machine
+                transitions, and error handling. For end-to-end passkey flows, test inside the
+                real app. For modal UI states, use the{' '}
+                <a href="index.html" style={{ color: 'var(--pink)' }}>PasskeyModal test page</a>{' '}
+                with Force Success/Error.
               </span>
             </div>
 

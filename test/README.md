@@ -80,4 +80,28 @@ Both pages use CDN React + Babel standalone for JSX -- no extra build dependenci
 
 ---
 
+## Limitations
+
+These test pages load the SDK directly in the browser without a proper bundler (webpack, Vite, etc.). This creates several constraints:
+
+- **Node.js `crypto` module**: Shimmed via a CDN polyfill (`crypto-browserify` from esm.sh). The polyfill does not fully work in this context, so operations that call `crypto.createHash` (address derivation) fail with a "Class constructor cannot be invoked without new" error. This does not affect the real SDK when consumed through a bundler.
+
+- **WebAuthn / Passkeys**: `navigator.credentials.create()` requires HTTPS or a properly configured platform authenticator (Windows Hello, Touch ID). On `http://localhost` with Windows 10, the browser prompt may not appear at all. The SDK itself works correctly on HTTPS in production.
+
+- **Bare import specifiers**: The ESM bundle uses bare imports (`buffer`, `crypto`, `react`). An importmap + local shims redirect these to CDN/UMD equivalents. This is fragile but adequate for testing UI states.
+
+**What you CAN test here:**
+- Modal UI states (Force Success/Error on index.html)
+- CSS, animations, layout of PasskeyModal
+- WASM loading and key generation
+- State machine transitions and error handling (hook-test.html)
+- Hook return values and callback timing
+
+**What requires the real app:**
+- Full end-to-end passkey registration flow
+- WebAuthn browser prompts
+- Address derivation and upload
+
+---
+
 *Updated: 2026-04-13*
