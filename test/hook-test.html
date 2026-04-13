@@ -446,11 +446,11 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useCallback, useRef } = React;
+    const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
-    // These must match PasskeyFlowStep from src/hooks/usePasskeyFlow.ts exactly
+    // Real step names from PasskeyFlowStep type
     const STEPS = ['idle', 'ready', 'registering', 'awaiting_completion', 'completing', 'success'];
-    // Branching steps shown separately: importing, ready_with_keypair, fallback_registering, error
+    const BRANCH_MAP = { importing: 1, ready_with_keypair: 1, fallback_registering: 2 };
 
     const LoadingScreen = ({ error }) => (
       <div className="loading-screen">
@@ -469,14 +469,7 @@
       </div>
     );
 
-    // Maps branch steps to the main-track position they relate to
-    const BRANCH_MAP = {
-      importing:             1, // branches from ready
-      ready_with_keypair:    1, // variant of ready (after import)
-      fallback_registering:  2, // alternative to registering
-    };
-
-    const StepMachine = ({ currentStep, wasmOk }) => {
+    const StepMachine = ({ currentStep }) => {
       const isMainStep = STEPS.includes(currentStep);
       const stepIdx = isMainStep ? STEPS.indexOf(currentStep) : (BRANCH_MAP[currentStep] ?? -1);
       const isError = currentStep === 'error';
@@ -487,12 +480,10 @@
           <div className="section-label" style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <span>State machine</span>
             <span style={{
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              letterSpacing: '0.04em',
-              color: wasmOk ? 'var(--green)' : wasmOk === false ? 'var(--red)' : 'var(--text-4)',
+              fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.04em',
+              color: window.__WASM_OK__ ? 'var(--green)' : window.__WASM_OK__ === false ? 'var(--red)' : 'var(--text-4)',
             }}>
-              {wasmOk ? 'WASM ready' : wasmOk === false ? 'WASM failed' : 'WASM loading'}
+              {window.__WASM_OK__ ? 'WASM ready' : window.__WASM_OK__ === false ? 'WASM failed' : 'WASM loading'}
             </span>
           </div>
           <div className="machine">
@@ -503,13 +494,9 @@
                 <div className="machine-step" key={step}>
                   <div className={`machine-node ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}`}>
                     <div className="machine-node-dot" />
-                    <div className="machine-node-label">
-                      {isBranch && i === stepIdx ? currentStep : step}
-                    </div>
+                    <div className="machine-node-label">{isBranch && i === stepIdx ? currentStep : step}</div>
                   </div>
-                  {i < STEPS.length - 1 && (
-                    <div className={`machine-edge ${isDone ? 'lit' : ''}`} />
-                  )}
+                  {i < STEPS.length - 1 && <div className={`machine-edge ${isDone ? 'lit' : ''}`} />}
                 </div>
               );
             })}
@@ -527,20 +514,226 @@
       );
     };
 
-    const HookInspector = () => {
-      const [sdkReady, setSdkReady] = useState(false);
-      const [sdkError, setSdkError] = useState(false);
+    // This is the actual hook tester. It MUST be a stable component (not defined
+    // inside another component's render) to avoid remounting on every parent render.
+    // It accesses window.__SDK__ directly since it only renders after SDK is loaded.
+    const FlowTester = () => {
+      const { usePasskeyFlow, usePasskeysContext } = window.__SDK__;
+      const { setShowPasskeyPrompt, showPasskeyPrompt } = usePasskeysContext();
+      const fileInputRef = useRef(null);
       const [log, setLog] = useState([]);
       const logEndRef = useRef(null);
 
       const addLog = useCallback((type, msg) => {
         const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
-        setLog(prev => [...prev.slice(-99), { ts, type, msg }]);
+        setLog(prev => [...prev.slice(-49), { ts, type, msg }]);
       }, []);
 
       useEffect(() => {
         logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [log]);
+
+      // Stable callbacks - never change, so usePasskeyFlow won't re-init
+      const mockGetUserRegistration = useCallback(async (address) => {
+        addLog('ok', `getUserRegistration(${address.slice(0,12)}...)`);
+        return { address, registrations: [] };
+      }, [addLog]);
+
+      const mockUploadRegistration = useCallback(async ({ address }) => {
+        addLog('ok', `uploadRegistration(${address.slice(0,12)}...)`);
+      }, [addLog]);
+
+      // Stable callback refs for event handlers to avoid re-creating the hook
+      const onStepChangeRef = useRef(null);
+      const onCompleteRef = useRef(null);
+      const onErrorRef = useRef(null);
+      const onCancelRef = useRef(null);
+      onStepChangeRef.current = (step) => addLog('step-change', `step \u2192 ${step}`);
+      onCompleteRef.current = () => addLog('ok', 'onComplete fired');
+      onErrorRef.current = (err) => addLog('err', `onError: ${err.code}${err.rawMessage ? ' / ' + err.rawMessage : ''}`);
+      onCancelRef.current = () => addLog('ok', 'onCancel fired');
+
+      const hook = usePasskeyFlow({
+        fqAppPrefix: 'HOOK-TEST',
+        getUserRegistration: mockGetUserRegistration,
+        uploadRegistration: mockUploadRegistration,
+        onStepChange: useCallback((s) => onStepChangeRef.current?.(s), []),
+        onComplete:   useCallback(()  => onCompleteRef.current?.(), []),
+        onError:      useCallback((e) => onErrorRef.current?.(e), []),
+        onCancel:     useCallback(()  => onCancelRef.current?.(), []),
+      });
+
+      const ensureOpen = useCallback((importMode) => {
+        return new Promise(resolve => {
+          setShowPasskeyPrompt({ value: true, importMode: importMode ?? false });
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        });
+      }, [setShowPasskeyPrompt]);
+
+      const handleFileImport = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          addLog('ok', `importKeyFile: ${file.name}`);
+          hook.importKeyFile(file);
+        }
+      };
+
+      const valClass = (k, v) => {
+        if (v === null || v === undefined) return 'v-null';
+        if (k === 'step') return 'v-step';
+        if (k === 'address') return 'v-addr';
+        if (k.startsWith('error')) return v ? 'v-error' : 'v-null';
+        if (typeof v === 'boolean') return v ? 'v-true' : 'v-false';
+        return '';
+      };
+      const valDisplay = (k, v) => {
+        if (v === null || v === undefined) return 'null';
+        if (k === 'address' && typeof v === 'string') return v.slice(0,18) + '...';
+        return String(v);
+      };
+
+      const stateFields = [
+        ['step',              hook.step],
+        ['promptActive',      showPasskeyPrompt.value],
+        ['isPasskeySupported', hook.isPasskeySupported],
+        ['isImportMode',      hook.isImportMode],
+        ['canRetry',          hook.canRetry],
+        ['error.code',        hook.error?.code ?? null],
+        ['error.rawMessage',  hook.error?.rawMessage ?? null],
+        ['address',           hook.address ?? null],
+      ];
+
+      return (
+        <div className="main">
+          <StepMachine currentStep={hook.step} />
+
+          <div className="left-col">
+            <div className="panel">
+              <div className="panel-header"><span className="panel-title">Hook state</span></div>
+              <div className="state-grid">
+                {stateFields.map(([k, v]) => (
+                  <div className="state-cell" key={k}>
+                    <div className="state-cell-key">{k}</div>
+                    <div className={`state-cell-val ${valClass(k, v)}`}>{valDisplay(k, v)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="notice">
+              <span className="notice-icon">!</span>
+              <span>
+                This is a two-step flow. <strong>startRegistration</strong> creates
+                a passkey credential (first browser prompt), then <strong>completeRegistration</strong> writes
+                the encryption key into it (second prompt). Both require localhost or HTTPS.
+                WebAuthn may not work on <code>http://localhost</code> on Windows without Windows Hello.
+                Use <strong>proceedWithoutPasskey</strong> to test the fallback path.
+              </span>
+            </div>
+
+            <div className="panel">
+              <div className="panel-header">
+                <span className="panel-title">Event log</span>
+                <button
+                  onClick={() => setLog([])}
+                  style={{
+                    background: 'var(--bg-raised)', border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)', color: 'var(--text-3)',
+                    fontFamily: 'var(--sans)', fontSize: '0.75rem', cursor: 'pointer',
+                    letterSpacing: '0.04em', textTransform: 'uppercase',
+                    fontWeight: 600, padding: '4px 10px',
+                  }}
+                >
+                  clear
+                </button>
+              </div>
+              <div className="log-list">
+                {log.length === 0
+                  ? <div className="log-empty">No events yet. Trigger an action.</div>
+                  : log.map((entry, i) => (
+                      <div className="log-row" key={i}>
+                        <span className="log-ts">{entry.ts}</span>
+                        <span className={`log-msg ${entry.type}`}>{entry.msg}</span>
+                      </div>
+                    ))
+                }
+                <div ref={logEndRef} />
+              </div>
+            </div>
+          </div>
+
+          <div className="right-col">
+            <div className="panel">
+              <div className="panel-header"><span className="panel-title">Actions</span></div>
+              <div className="action-list">
+                <button className="action-btn ab-primary" onClick={async () => { await ensureOpen(false); hook.startRegistration(); }}>
+                  <div className="btn-accent" />
+                  <div>
+                    <div className="action-btn-label">startRegistration()</div>
+                    <div className="action-btn-hint">Step 1: creates passkey credential</div>
+                  </div>
+                </button>
+                <button className="action-btn ab-success" onClick={() => hook.completeRegistration()} disabled={hook.step !== 'awaiting_completion'}>
+                  <div className="btn-accent" />
+                  <div>
+                    <div className="action-btn-label">completeRegistration()</div>
+                    <div className="action-btn-hint">Step 2: writes key into passkey (requires: awaiting_completion)</div>
+                  </div>
+                </button>
+                <button className="action-btn ab-warning" onClick={async () => { await ensureOpen(false); hook.proceedWithoutPasskey(); }}>
+                  <div className="btn-accent" />
+                  <div>
+                    <div className="action-btn-label">proceedWithoutPasskey()</div>
+                    <div className="action-btn-hint">Fallback: stores key in IndexedDB (no authenticator needed)</div>
+                  </div>
+                </button>
+                <button className="action-btn ab-violet" onClick={async () => { await ensureOpen(true); fileInputRef.current?.click(); }}>
+                  <div className="btn-accent" />
+                  <div>
+                    <div className="action-btn-label">importKeyFile()</div>
+                    <div className="action-btn-hint">Import a .key file, then startRegistration</div>
+                  </div>
+                </button>
+                <input ref={fileInputRef} type="file" accept=".key" style={{ display: 'none' }} onChange={handleFileImport} />
+                <div className="action-divider" />
+                <button className="action-btn ab-neutral" onClick={() => hook.retry()} disabled={!hook.canRetry}>
+                  <div className="btn-accent" />
+                  <div>
+                    <div className="action-btn-label">retry()</div>
+                    <div className="action-btn-hint">requires: canRetry</div>
+                  </div>
+                </button>
+                <button className="action-btn ab-neutral" onClick={() => hook.cancel()}>
+                  <div className="btn-accent" />
+                  <div className="action-btn-label">cancel()</div>
+                </button>
+                <button className="action-btn ab-neutral" onClick={() => hook.dismiss()}>
+                  <div className="btn-accent" />
+                  <div className="action-btn-label">dismiss()</div>
+                </button>
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-header"><span className="panel-title">Navigation</span></div>
+              <div style={{ padding: '12px' }}>
+                <a href="index.html" className="action-btn ab-primary" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="btn-accent" />
+                  <span className="action-btn-label" style={{ fontFamily: 'var(--sans)' }}>PasskeyModal test</span>
+                  <span style={{ color: 'var(--text-4)', fontSize: '0.875rem' }}>&rarr;</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Outer shell: waits for SDK, then renders FlowTester inside PasskeysProvider.
+    // FlowTester is a STABLE top-level component, never redefined.
+    const App = () => {
+      const [sdkReady, setSdkReady] = useState(false);
+      const [sdkError, setSdkError] = useState(false);
 
       useEffect(() => {
         let attempts = 0;
@@ -559,225 +752,6 @@
       if (!sdkReady) return <LoadingScreen error={sdkError} />;
 
       const { PasskeysProvider } = window.__SDK__;
-
-      const FlowTester = () => {
-        const fileInputRef = useRef(null);
-        const { usePasskeyFlow, usePasskeysContext } = window.__SDK__;
-        const { setShowPasskeyPrompt, showPasskeyPrompt } = usePasskeysContext();
-
-        const mockGetUserRegistration = useCallback(async (address) => {
-          addLog('ok', `getUserRegistration(${address.slice(0,10)}...)`);
-          return { address, registrations: [] };
-        }, []);
-
-        const mockUploadRegistration = useCallback(async ({ address }) => {
-          addLog('ok', `uploadRegistration(${address.slice(0,10)}...)`);
-        }, []);
-
-        // Ensure the passkey prompt is open so computedStep doesn't snap to idle.
-        // Returns a promise that resolves after React processes the state update.
-        const ensureOpen = useCallback((importMode) => {
-          return new Promise(resolve => {
-            setShowPasskeyPrompt({ value: true, importMode: importMode ?? false });
-            // Wait one frame for React to re-render with the new state
-            requestAnimationFrame(() => requestAnimationFrame(resolve));
-          });
-        }, [setShowPasskeyPrompt]);
-
-        const hook = usePasskeyFlow({
-          fqAppPrefix: 'HOOK-TEST',
-          getUserRegistration: mockGetUserRegistration,
-          uploadRegistration: mockUploadRegistration,
-          onStepChange: (step) => addLog('step-change', `step \u2192 ${step}`),
-          onComplete:   ()     => addLog('ok', 'onComplete fired'),
-          onError:      (err)  => addLog('err', `onError: ${err.code}${err.rawMessage ? ' / ' + err.rawMessage : ''}`),
-          onCancel:     ()     => addLog('ok', 'onCancel fired'),
-        });
-
-        const handleFileImport = (e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            addLog('ok', `importKeyFile: ${file.name}`);
-            hook.importKeyFile(file);
-          }
-        };
-
-        const valClass = (k, v) => {
-          if (v === null || v === undefined) return 'v-null';
-          if (k === 'step') return 'v-step';
-          if (k === 'address') return 'v-addr';
-          if (k.startsWith('error')) return v ? 'v-error' : 'v-null';
-          if (typeof v === 'boolean') return v ? 'v-true' : 'v-false';
-          return '';
-        };
-        const valDisplay = (k, v) => {
-          if (v === null || v === undefined) return 'null';
-          if (k === 'address' && typeof v === 'string') return v.slice(0,18) + '...';
-          return String(v);
-        };
-
-        const stateFields = [
-          ['step',              hook.step],
-          ['promptActive',      showPasskeyPrompt.value],
-          ['isPasskeySupported', hook.isPasskeySupported],
-          ['isImportMode',      hook.isImportMode],
-          ['canRetry',          hook.canRetry],
-          ['error.code',        hook.error?.code ?? null],
-          ['error.rawMessage',  hook.error?.rawMessage ?? null],
-          ['address',           hook.address ?? null],
-        ];
-
-        return (
-          <div className="main">
-            <StepMachine currentStep={hook.step} wasmOk={window.__WASM_OK__} />
-
-            <div className="left-col">
-              <div className="panel">
-                <div className="panel-header">
-                  <span className="panel-title">Hook state</span>
-                </div>
-                <div className="state-grid">
-                  {stateFields.map(([k, v]) => (
-                    <div className="state-cell" key={k}>
-                      <div className="state-cell-key">{k}</div>
-                      <div className={`state-cell-val ${valClass(k, v)}`}>{valDisplay(k, v)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="notice">
-                <span className="notice-icon">!</span>
-                <span>
-                  This is a two-step flow. <strong>startRegistration</strong> creates
-                  a passkey credential (first browser prompt), then <strong>completeRegistration</strong> writes
-                  the encryption key into it (second prompt). Both require localhost or HTTPS.
-                  {!window.__WASM_OK__ && ' WASM is not loaded, so crypto actions will fail.'}
-                </span>
-              </div>
-
-              <div className="panel">
-                <div className="panel-header">
-                  <span className="panel-title">Event log</span>
-                  <button
-                    onClick={() => { setLog([]); }}
-                    style={{
-                      background: 'var(--bg-raised)', border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius-sm)', color: 'var(--text-3)',
-                      fontFamily: 'var(--sans)', fontSize: '0.75rem', cursor: 'pointer',
-                      letterSpacing: '0.04em', textTransform: 'uppercase',
-                      fontWeight: 600, padding: '4px 10px',
-                    }}
-                  >
-                    clear
-                  </button>
-                </div>
-                <div className="log-list">
-                  {log.length === 0
-                    ? <div className="log-empty">No events yet. Trigger an action.</div>
-                    : log.map((entry, i) => (
-                        <div className="log-row" key={i}>
-                          <span className="log-ts">{entry.ts}</span>
-                          <span className={`log-msg ${entry.type}`}>{entry.msg}</span>
-                        </div>
-                      ))
-                  }
-                  <div ref={logEndRef} />
-                </div>
-              </div>
-            </div>
-
-            <div className="right-col">
-              <div className="panel">
-                <div className="panel-header">
-                  <span className="panel-title">Actions</span>
-                </div>
-                <div className="action-list">
-                  <button className="action-btn ab-primary" onClick={async () => { await ensureOpen(false); hook.startRegistration(); }}>
-                    <div className="btn-accent" />
-                    <div>
-                      <div className="action-btn-label">startRegistration()</div>
-                      <div className="action-btn-hint">Step 1: creates passkey credential</div>
-                    </div>
-                  </button>
-                  <button
-                    className="action-btn ab-success"
-                    onClick={() => hook.completeRegistration()}
-                    disabled={hook.step !== 'awaiting_completion'}
-                  >
-                    <div className="btn-accent" />
-                    <div>
-                      <div className="action-btn-label">completeRegistration()</div>
-                      <div className="action-btn-hint">Step 2: writes key into passkey (requires: awaiting_completion)</div>
-                    </div>
-                  </button>
-                  <button className="action-btn ab-warning" onClick={async () => { await ensureOpen(false); hook.proceedWithoutPasskey(); }}>
-                    <div className="btn-accent" />
-                    <div>
-                      <div className="action-btn-label">proceedWithoutPasskey()</div>
-                      <div className="action-btn-hint">Fallback: stores key in IndexedDB instead</div>
-                    </div>
-                  </button>
-                  <button className="action-btn ab-violet" onClick={async () => { await ensureOpen(true); fileInputRef.current?.click(); }}>
-                    <div className="btn-accent" />
-                    <div>
-                      <div className="action-btn-label">importKeyFile()</div>
-                      <div className="action-btn-hint">Import a .key file, then startRegistration</div>
-                    </div>
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".key"
-                    style={{ display: 'none' }}
-                    onChange={handleFileImport}
-                  />
-                  <div className="action-divider" />
-                  <button
-                    className="action-btn ab-neutral"
-                    onClick={() => hook.retry()}
-                    disabled={!hook.canRetry}
-                  >
-                    <div className="btn-accent" />
-                    <div>
-                      <div className="action-btn-label">retry()</div>
-                      <div className="action-btn-hint">requires: canRetry</div>
-                    </div>
-                  </button>
-                  <button className="action-btn ab-neutral" onClick={() => hook.cancel()}>
-                    <div className="btn-accent" />
-                    <div className="action-btn-label">cancel()</div>
-                  </button>
-                  <button className="action-btn ab-neutral" onClick={() => hook.dismiss()}>
-                    <div className="btn-accent" />
-                    <div className="action-btn-label">dismiss()</div>
-                  </button>
-                </div>
-              </div>
-
-              <div className="panel">
-                <div className="panel-header"><span className="panel-title">Navigation</span></div>
-                <div style={{ padding: '12px' }}>
-                  <a
-                    href="index.html"
-                    className="action-btn ab-primary"
-                    style={{
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <div className="btn-accent" />
-                    <span className="action-btn-label" style={{ fontFamily: 'var(--sans)' }}>PasskeyModal test</span>
-                    <span style={{ color: 'var(--text-4)', fontSize: '0.875rem' }}>&rarr;</span>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      };
 
       return (
         <PasskeysProvider fqAppPrefix="HOOK-TEST">
@@ -801,7 +775,7 @@
     };
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<HookInspector />);
+    root.render(<App />);
   </script>
 
   <script type="importmap">
