@@ -134,7 +134,9 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
       internalStep === 'registering' ||
       internalStep === 'completing' ||
       internalStep === 'importing' ||
-      internalStep === 'fallback_registering'
+      internalStep === 'fallback_registering' ||
+      internalStep === 'error' ||
+      internalStep === 'success'
     ) {
       return internalStep;
     }
@@ -227,7 +229,16 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
     let existing: secureChannel.UserRegistration | undefined;
     try {
       existing = await getUserRegistration(addr);
-    } catch {}
+    } catch (e: unknown) {
+      // "Not found" is expected for new users. Any other error (network, server)
+      // should abort to avoid clobbering existing device registrations.
+      const isNotFound = e instanceof Error && (
+        e.message.includes('not found') ||
+        e.message.includes('404') ||
+        e.message.includes('Not Found')
+      );
+      if (!isNotFound) throw e;
+    }
 
     const senderRegistration = await secureChannel.ConstructUserRegistration(
       senderIdent,
@@ -251,8 +262,9 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
     );
     await encryptDataSaveKey(2, envelope);
 
-    // Note: original code does NOT await this. Preserving that behavior.
-    uploadRegistration({ address: addr, registration: senderRegistration });
+    // Fire-and-forget: don't block the flow on upload, but log failures.
+    uploadRegistration({ address: addr, registration: senderRegistration })
+      .catch((e) => console.error('Registration upload failed:', e));
   }, [getUserRegistration, uploadRegistration]);
 
   // --- Actions ---
