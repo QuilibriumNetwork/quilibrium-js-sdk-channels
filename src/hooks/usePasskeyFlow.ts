@@ -101,6 +101,13 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
   const [canRetry, setCanRetry] = useState(false);
   const [passkeySupported, setPasskeySupported] = useState(true);
 
+  // Persist keypair across renders to prevent regeneration (Issue 5 fix)
+  const keypairRef = useRef<string | undefined>(undefined);
+  // Guard against concurrent async invocations (Issue 6 fix)
+  const isInFlightRef = useRef(false);
+
+  useEffect(() => { keypairRef.current = keypair; }, [keypair]);
+
   // Track previous step for onStepChange callback
   const prevStepRef = useRef<PasskeyFlowStep>('idle');
 
@@ -185,13 +192,14 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
    * the raw JSON string (for state storage).
    */
   const getOrGenerateKeypair = useCallback((): { pair: string; parsed: { public_key: number[]; private_key: number[] } } => {
-    let pair = keypair ?? '';
+    let pair = keypairRef.current ?? '';
     if (!pair) {
       pair = ch.js_generate_ed448();
+      keypairRef.current = pair;
       setKeypair(pair);
     }
     return { pair, parsed: JSON.parse(pair) };
-  }, [keypair]);
+  }, []);
 
   /**
    * Derive address from a public key via sha256 + base58btc.
@@ -250,6 +258,8 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
   // --- Actions ---
 
   const importKeyFile = useCallback(async (file: File): Promise<void> => {
+    if (isInFlightRef.current) return;
+    isInFlightRef.current = true;
     setInternalStep('importing');
     setShowPasskeyPrompt({ ...showPasskeyPromptRef.current, value: true, importMode: true });
     try {
@@ -293,10 +303,14 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
       setPasskeyRegistrationComplete(false);
       setPasskeyRegistrationError(classified.rawMessage ?? 'Invalid key file');
       setInternalStep('error');
+    } finally {
+      isInFlightRef.current = false;
     }
   }, [setShowPasskeyPrompt, setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
 
   const startRegistration = useCallback(async (): Promise<void> => {
+    if (isInFlightRef.current) return;
+    isInFlightRef.current = true;
     setInternalStep('registering');
     setShowPasskeyPrompt({ ...showPasskeyPromptRef.current, value: true, importMode: false });
     try {
@@ -320,10 +334,14 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
       setPasskeyRegistrationComplete(false);
       setPasskeyRegistrationError(classified.rawMessage ?? 'Registration failed');
       setInternalStep('error');
+    } finally {
+      isInFlightRef.current = false;
     }
   }, [fqAppPrefix, setShowPasskeyPrompt, getOrGenerateKeypair, deriveAddress, setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
 
   const completeRegistrationAction = useCallback(async (): Promise<void> => {
+    if (isInFlightRef.current) return;
+    isInFlightRef.current = true;
     setInternalStep('completing');
     try {
       const { pair, parsed: p } = getOrGenerateKeypair();
@@ -358,10 +376,14 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
       setPasskeyRegistrationComplete(false);
       setPasskeyRegistrationError(classified.rawMessage ?? 'Completion failed');
       setInternalStep('error');
+    } finally {
+      isInFlightRef.current = false;
     }
   }, [fqAppPrefix, credentialId, address, getOrGenerateKeypair, deriveAddress, buildAndUploadRegistration, setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
 
   const proceedWithoutPasskey = useCallback(async (): Promise<void> => {
+    if (isInFlightRef.current) return;
+    isInFlightRef.current = true;
     setInternalStep('fallback_registering');
     setShowPasskeyPrompt({ ...showPasskeyPromptRef.current, value: true, importMode: false });
     try {
@@ -403,6 +425,8 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
       setPasskeyRegistrationComplete(false);
       setPasskeyRegistrationError(classified.rawMessage ?? 'Fallback registration failed');
       setInternalStep('error');
+    } finally {
+      isInFlightRef.current = false;
     }
   }, [fqAppPrefix, setShowPasskeyPrompt, address, getOrGenerateKeypair, deriveAddress, buildAndUploadRegistration, setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
 
