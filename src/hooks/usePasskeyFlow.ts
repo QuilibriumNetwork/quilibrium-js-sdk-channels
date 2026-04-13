@@ -105,6 +105,8 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
   const keypairRef = useRef<string | undefined>(undefined);
   // Guard against concurrent async invocations (Issue 6 fix)
   const isInFlightRef = useRef(false);
+  // Store authtype from register() so completeRegistration() reuses it (Issue 18 fix)
+  const authtypeRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => { keypairRef.current = keypair; }, [keypair]);
 
@@ -340,6 +342,7 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
 
       const r = await register(fqAppPrefix, addr);
       setCredentialId(r.id);
+      authtypeRef.current = r.authtype;
 
       // Check if register() detected incompatibility mid-flow
       if (window.localStorage.getItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`)) {
@@ -377,7 +380,7 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
         largeBlob: Buffer.from(p.private_key).toString('hex'),
         publicKey: Buffer.from(p.public_key).toString('hex'),
         address: addr,
-      });
+      }, authtypeRef.current);
 
       // Check if completeRegistration fell back to IndexedDB silently
       if (window.localStorage.getItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`)) {
