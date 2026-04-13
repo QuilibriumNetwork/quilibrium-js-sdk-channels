@@ -10,7 +10,7 @@
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "clean": "rimraf dist",
-    "test": "python3 -m http.server 3001",
+    "test": "node test/serve.js",
     "test-build": "node test/create-build-test.js"
   },
   "files": [
