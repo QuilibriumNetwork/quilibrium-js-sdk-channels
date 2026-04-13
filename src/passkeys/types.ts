@@ -192,14 +192,16 @@ export const register = async (fqAppPrefix: string, account: string) => {
     throw new Error('could not register passkey');
   }
 
-  if (
-    (authtype == 'PRF' &&
-      // @ts-ignore
-      !credential.getClientExtensionResults().prf.enabled) ||
-      // @ts-ignore
-      !credential.getClientExtensionResults().largeBlob
-  ) {
-    window.localStorage.setItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`, 'true');
+  if (authtype == 'PRF') {
+    // @ts-ignore
+    if (!credential.getClientExtensionResults().prf?.enabled) {
+      window.localStorage.setItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`, 'true');
+    }
+  } else {
+    // @ts-ignore
+    if (!credential.getClientExtensionResults().largeBlob) {
+      window.localStorage.setItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`, 'true');
+    }
   }
 
   return {
@@ -325,6 +327,12 @@ export const completeRegistration = async (
         ciphertext: Buffer.from(largeBlob).toString('hex'),
       })
     );
+    updateStoredPasskey(request.credentialId, {
+      credentialId: request.credentialId,
+      address: request.address,
+      publicKey: request.publicKey,
+      completedOnboarding: false,
+    });
     return {
       id: request.credentialId,
       rawId: request.credentialId,
