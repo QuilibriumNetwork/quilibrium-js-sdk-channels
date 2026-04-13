@@ -111,6 +111,14 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
   // Track previous step for onStepChange callback
   const prevStepRef = useRef<PasskeyFlowStep>('idle');
 
+  // Refs for callback props to avoid useEffect re-runs from unstable references (Issue 19 fix)
+  const onStepChangeRef = useRef(onStepChange);
+  const onCompleteRef = useRef(onComplete);
+  const onErrorRef = useRef(onError);
+  useEffect(() => { onStepChangeRef.current = onStepChange; }, [onStepChange]);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+
   // --- Electron / incompatibility detection (runs once on mount) ---
   useEffect(() => {
     // @ts-ignore
@@ -176,16 +184,16 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
   useEffect(() => {
     if (step !== prevStepRef.current) {
       prevStepRef.current = step;
-      onStepChange?.(step);
+      onStepChangeRef.current?.(step);
 
       if (step === 'success') {
-        onComplete?.();
+        onCompleteRef.current?.();
       }
       if (step === 'error' && error) {
-        onError?.(error);
+        onErrorRef.current?.(error);
       }
     }
-  }, [step, error, onStepChange, onComplete, onError]);
+  }, [step, error]);
 
   // --- Shared helpers ---
 
