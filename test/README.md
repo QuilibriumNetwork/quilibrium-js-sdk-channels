@@ -1,106 +1,71 @@
-# Passkey Test Pages
-
-Two visual test pages for the SDK, both served by `yarn test`.
+# SDK Testing
 
 ## Quick Start
 
 ```bash
-yarn build       # build the SDK first (required -- test pages load from dist/)
-yarn test        # serve project root on http://localhost:3001
+yarn build       # build the SDK (required before testing)
+yarn test        # run automated health check (no browser needed)
+```
+
+`yarn test` verifies the SDK works end-to-end in under a second:
+
+- Build artifacts exist (JS, ESM, .d.ts, CSS, WASM)
+- SDK module loads
+- WASM crypto backend compiles and initializes
+- Ed448 key generation produces valid keypairs
+- Public key derivation works
+- All required exports present (PasskeysProvider, usePasskeyFlow, PasskeyModal, etc.)
+- TypeScript declarations include expected types
+
+If any check fails, it exits with code 1 and tells you what broke.
+
+---
+
+## Visual Test Pages
+
+For testing modal UI states in the browser:
+
+```bash
+yarn serve       # start HTTP server on http://localhost:3001
 ```
 
 Then open:
 
-- `http://localhost:3001/test/` -- PasskeyModal full component test
-- `http://localhost:3001/test/hook-test.html` -- usePasskeyFlow hook inspector
-
-For build-verified testing (same as CI):
-
-```bash
-yarn test-build  # full build + serve
-```
-
----
-
-## Test Pages
+- `http://localhost:3001/test/` -- PasskeyModal visual test
+- `http://localhost:3001/test/hook-test.html` -- SDK diagnostics + hook inspector
 
 ### `index.html` -- PasskeyModal Visual Test
 
-Tests the real `PasskeyModal` component loaded from `dist/index.esm.js`.
+Tests the real `PasskeyModal` component from `dist/`. Use the sidebar to open the modal and test visual states.
 
-**Control panel:**
-- **Show Create** -- opens the modal in new-account flow
-- **Show Import** -- opens the modal in import flow (with .key file dropzone)
-- **Force Success** -- injects success context values; no authenticator needed (UI-only test)
-- **Force Error** -- injects error context values with a sample error message; no authenticator needed
+**Recommended workflow:**
+1. Click **Show Create** or **Show Import** to open the modal
+2. Use **Force Success / Force Error** to test all visual states without a real authenticator
+3. The modal's own buttons (Continue, Cancel) drive real state, but WebAuthn requires HTTPS
 
-Note: the modal renders a full-page overlay, so sidebar controls are only accessible before opening the modal. Use Force Success/Error before opening, or use the modal's own controls to dismiss it.
+### `hook-test.html` -- SDK Diagnostics + Hook Inspector
 
-**Status panel** shows live context values: visible, importMode, complete, error.
+Two sections:
 
-The modal's own buttons (Continue, Cancel, Proceed Without Passkeys) drive state normally -- no mocking. Clicking "Continue" will trigger a real WebAuthn prompt.
+1. **SDK Diagnostics** -- runs the same checks as `yarn test` but in the browser. Shows pass/fail for SDK loading, WASM, key generation, WebAuthn API, and exports. If you see all green, the SDK build is healthy.
 
-> **Note:** `yarn test-build` generates `test-build.html` via `test/create-build-test.js`. That page renders modal states using raw DOM + hardcoded CSS class names (no React, no real component). It is a CSS smoke test for the build pipeline, not a functional component test. Use `index.html` for component testing.
-
-**Test flows:**
-1. Create flow: Show Create Modal > Continue > (passkey prompt) > Continue > success
-2. Import flow: Show Import Modal > drop .key file > Continue > (passkey prompt) > success
-3. Error flow: Show Create Modal > cancel the passkey prompt > error state > Proceed Without Passkeys
-4. Cancel: Show Create Modal > Cancel > modal closes cleanly; reopen shows fresh state
+2. **Hook Inspector** -- shows the `usePasskeyFlow` state machine live. Action buttons let you trigger hook methods and watch state transitions in the event log. Actions will fail with crypto polyfill errors (this is expected in the browser, see limitations below).
 
 ---
 
-### `hook-test.html` -- usePasskeyFlow Hook Inspector
+## Limitations of the Visual Test Pages
 
-Tests the `usePasskeyFlow` hook directly, without `PasskeyModal`. Useful for verifying the state machine in isolation.
+The test pages load the SDK directly in the browser without a bundler. This creates constraints that do not affect the real SDK when consumed through webpack/Vite:
 
-**State machine** visualizes the main flow steps (`idle` → `ready` → `registering` → `awaiting_completion` → `completing` → `success`) with branch steps (`importing`, `ready_with_keypair`, `fallback_registering`, `error`) shown inline when active. A WASM status indicator in the header and state machine bar shows whether the crypto backend loaded successfully.
+- **crypto polyfill**: Node.js `crypto` is shimmed via esm.sh. The shim doesn't fully work, so address derivation fails with a "Class constructor" error.
+- **WebAuthn**: Requires HTTPS and a platform authenticator (Windows Hello, Touch ID). Does not work on `http://localhost` on most Windows setups.
+- **Bare imports**: Handled via importmap + local shims for React. Fragile but sufficient for UI testing.
 
-**State panel** shows all hook return values live: `step`, `error`, `address`, `isImportMode`, `isPasskeySupported`, `canRetry`.
+**What the visual pages are good for:** modal CSS/animations/layout, Force Success/Error UI states, verifying WASM loads, watching state machine transitions.
 
-**Action buttons** are wired to every hook method:
-- `startRegistration()` -- triggers first WebAuthn prompt
-- `completeRegistration()` -- triggers second WebAuthn prompt (enabled only when `step: awaiting_completion`)
-- `proceedWithoutPasskey()` -- fallback flow
-- `importKeyFile()` -- file picker for .key files
-- `retry()` -- enabled only when `canRetry: true`
-- `cancel()` / `dismiss()`
+**What requires the real app:** end-to-end passkey registration, WebAuthn prompts, address derivation.
 
-**Event log** records all `onStepChange`, `onComplete`, `onError`, `onCancel` callback fires with timestamps.
-
----
-
-## Architecture
-
-- **Source CSS**: `src/components/modals/PasskeyModal.css`
-- **Built CSS**: `dist/index.css` (compiled with PostCSS) -- used by both test pages
-- **Built SDK**: `dist/index.esm.js` -- loaded as ES module, exposed as `window.__SDK__`
-
-Both pages use CDN React + Babel standalone for JSX -- no extra build dependencies. WASM is initialized on load; if it fails, the SDK still loads but crypto actions will not work (indicated by a red status dot).
-
----
-
-## Limitations
-
-These test pages load the SDK directly in the browser without a proper bundler (webpack, Vite, etc.). This creates several constraints:
-
-- **Node.js `crypto` module**: Shimmed via a CDN polyfill (`crypto-browserify` from esm.sh). The polyfill does not fully work in this context, so operations that call `crypto.createHash` (address derivation) fail with a "Class constructor cannot be invoked without new" error. This does not affect the real SDK when consumed through a bundler.
-
-- **WebAuthn / Passkeys**: `navigator.credentials.create()` requires HTTPS or a properly configured platform authenticator (Windows Hello, Touch ID). On `http://localhost` with Windows 10, the browser prompt may not appear at all. The SDK itself works correctly on HTTPS in production.
-
-- **Bare import specifiers**: The ESM bundle uses bare imports (`buffer`, `crypto`, `react`). An importmap + local shims redirect these to CDN/UMD equivalents. This is fragile but adequate for testing UI states.
-
-**What you CAN test here:**
-- Modal UI states (Force Success/Error on index.html)
-- CSS, animations, layout of PasskeyModal
-- WASM loading and key generation
-- State machine transitions and error handling (hook-test.html)
-- Hook return values and callback timing
-
-**What requires the real app:**
-- Full end-to-end passkey registration flow
-- WebAuthn browser prompts
-- Address derivation and upload
+The automated `yarn test` check covers everything that can be verified without a browser.
 
 ---
 
