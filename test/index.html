@@ -1,352 +1,537 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PasskeyModal Style Test</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link rel="stylesheet" href="PasskeyModal.css">
-    <style>
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-                sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-        
-        .control-panel {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            z-index: 10001;
-        }
-        
-        .control-panel h3 {
-            margin: 0 0 15px 0;
-            font-size: 18px;
-            font-weight: 600;
-        }
-        
-        .control-panel button {
-            display: block;
-            width: 100%;
-            margin-bottom: 10px;
-            padding: 8px 16px;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .control-panel button:hover {
-            background: #2563eb;
-        }
-        
-        .control-panel button:last-child {
-            margin-bottom: 0;
-        }
-        
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PasskeyModal — Component Test</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="../dist/index.css">
+  <style>
+    /*
+      Dark palette: burgundy-tinted darks per Quilibrium style guide.
+      Backgrounds are very dark shades derived from burgundy (#40001b),
+      not pure black or neutral grays.
+    */
+    :root {
+      --bg-page:      #110810;
+      --bg-surface:   #170d14;
+      --bg-raised:    #1e1219;
+      --bg-inset:     #231620;
+      --border:       rgba(255, 230, 240, 0.10);
+      --border-hi:    rgba(255, 230, 240, 0.18);
+      --border-subtle:rgba(255, 230, 240, 0.05);
+
+      --text:         #f0e9e4;
+      --text-2:       rgba(240, 233, 228, 0.75);
+      --text-3:       rgba(240, 233, 228, 0.50);
+      --text-4:       rgba(240, 233, 228, 0.35);
+
+      --pink:         #ff056d;
+      --pink-dim:     rgba(255, 5, 109, 0.10);
+      --green:        #34d97a;
+      --green-dim:    rgba(52, 217, 122, 0.10);
+      --red:          #f25c5c;
+      --red-dim:      rgba(242, 92, 92, 0.10);
+      --orange:       #ff8533;
+      --blue:         #4d9eff;
+
+      --sans:         'Inter', system-ui, -apple-system, sans-serif;
+      --code:         'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      --radius:       12px;
+      --radius-sm:    8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--sans);
+      font-size: 14px;
+      background: var(--bg-page);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- LOADING ---- */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 16px;
+    }
+    .loading-wordmark {
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .loading-bar-wrap {
+      width: 160px;
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+    .loading-bar {
+      height: 100%;
+      background: var(--pink);
+      border-radius: 1px;
+      animation: loadbar 1.8s ease-in-out infinite;
+      transform-origin: left;
+    }
+    @keyframes loadbar {
+      0%   { transform: scaleX(0) translateX(0%); opacity: 1; }
+      60%  { transform: scaleX(1) translateX(0%); opacity: 1; }
+      100% { transform: scaleX(1) translateX(110%); opacity: 0; }
+    }
+    .loading-label {
+      font-family: var(--code);
+      font-size: 0.8125rem;
+      color: var(--text-3);
+    }
+    .loading-error {
+      font-size: 0.9375rem;
+      color: var(--red);
+      text-align: center;
+      max-width: 360px;
+      line-height: 1.5;
+    }
+    .loading-error code {
+      display: block;
+      margin-top: 8px;
+      font-family: var(--code);
+      font-size: 0.8125rem;
+      color: var(--text-2);
+      background: var(--bg-raised);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* ---- LAYOUT ---- */
+    .shell {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      grid-template-rows: 52px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ---- TOPBAR ---- */
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+    }
+    .topbar-wordmark {
+      font-size: 0.875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .topbar-sep {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+    }
+    .topbar-title {
+      font-size: 0.875rem;
+      color: var(--text-3);
+    }
+    .topbar-dot {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8125rem;
+      color: var(--text-3);
+    }
+    .topbar-dot .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* ---- SIDEBAR ---- */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: var(--bg-surface);
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow-y: auto;
+    }
+    .sidebar-section {
+      padding: 0 16px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 16px;
+    }
+    .sidebar-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .sidebar-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 10px;
+    }
+    .sidebar-btn {
+      display: block;
+      width: 100%;
+      padding: 9px 12px;
+      margin-bottom: 5px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-2);
+      font-family: var(--sans);
+      font-size: 0.875rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s cubic-bezier(0, 0, 0.5, 1);
+    }
+    .sidebar-btn:last-child { margin-bottom: 0; }
+    .sidebar-btn:hover {
+      border-color: var(--border-hi);
+      color: var(--text);
+      background: var(--bg-raised);
+    }
+    .sidebar-btn.btn-success {
+      border-color: rgba(52, 217, 122, 0.2);
+      color: var(--green);
+    }
+    .sidebar-btn.btn-success:hover {
+      background: var(--green-dim);
+      border-color: var(--green);
+    }
+    .sidebar-btn.btn-danger {
+      border-color: rgba(242, 92, 92, 0.2);
+      color: var(--red);
+    }
+    .sidebar-btn.btn-danger:hover {
+      background: var(--red-dim);
+      border-color: var(--red);
+    }
+
+    /* ---- STATUS READOUT ---- */
+    .status-block {
+      padding: 10px 12px;
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      font-size: 0.8125rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .status-row:last-child { border-bottom: none; }
+    .status-key { color: var(--text-3); }
+    .status-val { color: var(--text-2); font-family: var(--code); font-size: 0.8125rem; }
+    .status-val.true  { color: var(--green); }
+    .status-val.false { color: var(--red); }
+    .status-val.yes   { color: var(--red); }
+
+    /* ---- MAIN STAGE ---- */
+    .stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 40px;
+      position: relative;
+    }
+
+    .stage-hero {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    .stage-hero-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 16px;
+    }
+    .stage-hero-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .stage-hero-title span {
+      color: var(--pink);
+    }
+    .stage-hero-sub {
+      font-size: 0.9375rem;
+      color: var(--text-3);
+      line-height: 1.6;
+      max-width: 400px;
+      margin: 0 auto 32px;
+    }
+
+    .stage-instructions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      font-size: 0.875rem;
+      color: var(--text-3);
+      max-width: 440px;
+      width: 100%;
+    }
+    .stage-instructions .step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      line-height: 1.5;
+    }
+    .stage-instructions .step-num {
+      color: var(--pink);
+      font-weight: 600;
+      flex-shrink: 0;
+      width: 16px;
+    }
+    .stage-instructions strong { color: var(--text-2); }
+    .stage-instructions a {
+      color: var(--pink);
+      text-decoration: none;
+    }
+    .stage-instructions a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
-    <div class="control-panel">
-        <h3>PasskeyModal Tests</h3>
-        <button onclick="showModal('create')">Show Create Modal</button>
-        <button onclick="showModal('import')">Show Import Modal</button>
-        <button onclick="showModal('success')">Show Success State</button>
-        <button onclick="showModal('error')">Show Error State</button>
-        <button onclick="hideModal()">Hide Modal</button>
-    </div>
+  <div id="root"></div>
 
-    <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
 
-    <script type="text/babel">
-        const { useState, useEffect, createContext, useContext } = React;
+    const LoadingScreen = ({ error }) => (
+      <div className="loading-screen">
+        <div className="loading-wordmark">Quilibrium SDK</div>
+        {error ? (
+          <div className="loading-error">
+            Failed to load SDK module.
+            <code>Run `yarn build` from the project root, then refresh.</code>
+          </div>
+        ) : (
+          <>
+            <div className="loading-bar-wrap"><div className="loading-bar" /></div>
+            <div className="loading-label">loading dist/index.esm.js</div>
+          </>
+        )}
+      </div>
+    );
 
-        // Mock PasskeysContext
-        const PasskeysContext = createContext({
-            showPasskeyPrompt: { value: false, importMode: false },
-            setShowPasskeyPrompt: () => {},
-            passkeyRegistrationComplete: undefined,
-            setPasskeyRegistrationComplete: () => {},
-            passkeyRegistrationError: undefined,
-            setPasskeyRegistrationError: () => {},
-        });
+    const ModalTestApp = () => {
+      const [sdkReady, setSdkReady] = useState(false);
+      const [sdkError, setSdkError] = useState(false);
 
-        const usePasskeysContext = () => useContext(PasskeysContext);
+      const mockGetUserRegistration = useCallback(async (address) => {
+        return { address, registrations: [] };
+      }, []);
 
-        // COPY OF CURRENT PasskeyModal component (updated manually when needed)
-        const PasskeyModal = ({ fqAppPrefix, getUserRegistration, uploadRegistration }) => {
-            const {
-                showPasskeyPrompt,
-                setShowPasskeyPrompt,
-                passkeyRegistrationComplete,
-                setPasskeyRegistrationComplete,
-                passkeyRegistrationError,
-                setPasskeyRegistrationError,
-            } = usePasskeysContext();
+      const mockUploadRegistration = useCallback(async () => {}, []);
 
-            const [keypair, setKeypair] = useState();
-            const [id, setId] = useState();
-            const [files, setFiles] = useState([]);
+      useEffect(() => {
+        let attempts = 0;
+        const interval = setInterval(() => {
+          if (window.__SDK__) {
+            setSdkReady(true);
+            clearInterval(interval);
+          } else if (window.__SDK_ERROR__) {
+            setSdkError(true);
+            clearInterval(interval);
+          } else if (++attempts > 80) { // 8 seconds
+            setSdkError(true);
+            clearInterval(interval);
+          }
+        }, 100);
+        return () => clearInterval(interval);
+      }, []);
 
-            // Mock dropzone
-            const getRootProps = () => ({
-                onClick: () => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = '.key';
-                    input.onchange = (e) => {
-                        if (e.target.files[0]) {
-                            setFiles([{ name: e.target.files[0].name }]);
-                        }
-                    };
-                    input.click();
-                }
-            });
+      if (!sdkReady) return <LoadingScreen error={sdkError} />;
 
-            const getInputProps = () => ({});
-            const acceptedFiles = files;
+      const { PasskeysProvider, usePasskeysContext, PasskeyModal } = window.__SDK__;
 
-            return (
-                <div
-                    className={`passkey-modal-backdrop ${showPasskeyPrompt.value ? '' : 'hidden'}`}
-                >
-                    <div className="passkey-modal-container">
-                        <h2 className="passkey-modal-header">
-                            {showPasskeyPrompt.importMode
-                                ? 'Import Existing Key'
-                                : 'Create Passkey'}
-                        </h2>
-                        <div className="passkey-modal-icon-wrapper">
-                            <div
-                                style={{
-                                    fontSize: '23pt',
-                                    width: '60px',
-                                    height: '60px',
-                                    backgroundImage: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? 'url("passkey.png")' : undefined,
-                                    backgroundColor: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? '#0287F2' : undefined,
-                                    borderColor: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? '#0266CC' : undefined,
-                                }}
-                                className={
-                                    'passkey-modal-icon' +
-                                    (passkeyRegistrationComplete === true
-                                        ? ' success'
-                                        : passkeyRegistrationComplete === false
-                                            ? ' error'
-                                            : ' default pulsating')
-                                }
-                            >
-                                {passkeyRegistrationComplete === true
-                                    ? '✓'
-                                    : passkeyRegistrationComplete === false
-                                        ? '!'
-                                        : ''}
-                            </div>
-                        </div>
-                        <div className="passkey-modal-content">
-                            {passkeyRegistrationComplete === false && passkeyRegistrationError ? (
-                                <>
-                                    <div>
-                                        An error was encountered while attempting to register the
-                                        passkey.
-                                    </div>
-                                    <div
-                                        className="passkey-modal-error"
-                                        style={{
-                                            fontFamily:
-                                                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                                        }}
-                                    >
-                                        {passkeyRegistrationError}
-                                    </div>
-                                    <div className="passkey-modal-mt-4">
-                                        If your browser told you the passkey option cannot be used with
-                                        the site, you may be running an unsupported browser. If the
-                                        browser provides an option to use a phone for passkeys, use
-                                        this. Alternatively, if you would like to proceed without
-                                        passkeys, click Proceed Without Passkeys.
-                                    </div>
-                                </>
-                            ) : passkeyRegistrationComplete === true ? (
-                                'Your passkey has been successfully created.'
-                            ) : id ? (
-                                'To save the account, you will need to perform one more passkey interaction. Tap continue to complete.'
-                            ) : showPasskeyPrompt.importMode ? (
-                                keypair ? (
-                                    "Use Passkeys to save your account, with the security of your own device's secure element. This will require two round-trips with your authenticator to complete to fully save the account."
-                                ) : (
-                                    'To begin, import your existing key file. Drop it in the area below or click on the area below to select the file.'
-                                )
-                            ) : (
-                                "Use Passkeys to access your account, with the security of your own device's secure element. This will require two round-trips with your authenticator to complete to fully register the account."
-                            )}
-                        </div>
-                        {showPasskeyPrompt.importMode &&
-                            !passkeyRegistrationComplete &&
-                            !keypair && (
-                                <div className="passkey-modal-content">
-                                    <div
-                                        className="passkey-modal-dropzone"
-                                        {...getRootProps()}
-                                    >
-                                        <input {...getInputProps()} style={{ display: 'none' }} />
-                                        <div className="passkey-modal-dropzone-text">
-                                            {acceptedFiles.length
-                                                ? acceptedFiles[0].name
-                                                : 'Drop key file here or click to select'}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        
-                        {/* Continue Button */}
-                        {showPasskeyPrompt.importMode ? (
-                            showPasskeyPrompt.importMode &&
-                            (acceptedFiles.length || passkeyRegistrationComplete) ? (
-                                <div
-                                    onClick={async () => {
-                                        if (passkeyRegistrationComplete) {
-                                            setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-                                        } else {
-                                            // Mock registration
-                                            setPasskeyRegistrationComplete(true);
-                                            setTimeout(() => {
-                                                setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-                                            }, 2000);
-                                        }
-                                    }}
-                                    className="passkey-modal-btn primary"
-                                >
-                                    Continue
-                                </div>
-                            ) : null
-                        ) : (
-                            <div
-                                onClick={async () => {
-                                    if (passkeyRegistrationComplete) {
-                                        setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-                                    } else {
-                                        // Mock registration
-                                        setPasskeyRegistrationComplete(true);
-                                        setTimeout(() => {
-                                            setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-                                        }, 2000);
-                                    }
-                                }}
-                                className="passkey-modal-btn primary"
-                            >
-                                Continue
-                            </div>
-                        )}
-                        
-                        {/* Proceed Without Passkeys Button */}
-                        {passkeyRegistrationError &&
-                            (!showPasskeyPrompt.importMode || keypair) && (
-                                <div
-                                    onClick={async () => {
-                                        setPasskeyRegistrationComplete(true);
-                                        setPasskeyRegistrationError(undefined);
-                                        setTimeout(() => {
-                                            setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-                                        }, 2000);
-                                    }}
-                                    className="passkey-modal-btn warning"
-                                >
-                                    Proceed Without Passkeys
-                                </div>
-                            )}
-                        
-                        {/* Cancel Button */}
-                        {!passkeyRegistrationComplete && (
-                            <div
-                                onClick={async () => {
-                                    setPasskeyRegistrationError(undefined);
-                                    setPasskeyRegistrationComplete(undefined);
-                                    setKeypair(undefined);
-                                    setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-                                }}
-                                className="passkey-modal-btn secondary"
-                            >
-                                Cancel
-                            </div>
-                        )}
-                    </div>
+      const ControlPanel = () => {
+        const ctx = usePasskeysContext();
+        const { showPasskeyPrompt, setShowPasskeyPrompt } = ctx;
+
+        return (
+          <div className="sidebar">
+            <div className="sidebar-section">
+              <div className="sidebar-label">Open modal</div>
+              <button
+                className="sidebar-btn"
+                onClick={() => setShowPasskeyPrompt({ value: true, importMode: false })}
+              >
+                Show Create
+              </button>
+              <button
+                className="sidebar-btn"
+                onClick={() => setShowPasskeyPrompt({ value: true, importMode: true })}
+              >
+                Show Import
+              </button>
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-label">Force state</div>
+              <button
+                className="sidebar-btn btn-success"
+                onClick={() => {
+                  ctx.setPasskeyRegistrationComplete(true);
+                  ctx.setPasskeyRegistrationError(undefined);
+                  setShowPasskeyPrompt({ value: true, importMode: false });
+                }}
+              >
+                Force Success
+              </button>
+              <button
+                className="sidebar-btn btn-danger"
+                onClick={() => {
+                  ctx.setPasskeyRegistrationComplete(false);
+                  ctx.setPasskeyRegistrationError('Simulated: NotAllowedError -- timed out or not allowed.');
+                  setShowPasskeyPrompt({ value: true, importMode: false });
+                }}
+              >
+                Force Error
+              </button>
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-label">Context state</div>
+              <div className="status-block">
+                <div className="status-row">
+                  <span className="status-key">visible</span>
+                  <span className={`status-val ${showPasskeyPrompt.value}`}>{String(showPasskeyPrompt.value)}</span>
                 </div>
-            );
-        };
+                <div className="status-row">
+                  <span className="status-key">importMode</span>
+                  <span className={`status-val ${showPasskeyPrompt.importMode}`}>{String(showPasskeyPrompt.importMode)}</span>
+                </div>
+                <div className="status-row">
+                  <span className="status-key">complete</span>
+                  <span className={`status-val ${ctx.passkeyRegistrationComplete}`}>{String(ctx.passkeyRegistrationComplete)}</span>
+                </div>
+                <div className="status-row">
+                  <span className="status-key">error</span>
+                  <span className={`status-val ${ctx.passkeyRegistrationError ? 'yes' : 'false'}`}>
+                    {ctx.passkeyRegistrationError ? 'set' : 'none'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
 
-        // Test App Component
-        const TestApp = () => {
-            const [showPasskeyPrompt, setShowPasskeyPrompt] = useState({ value: false, importMode: false });
-            const [passkeyRegistrationComplete, setPasskeyRegistrationComplete] = useState(undefined);
-            const [passkeyRegistrationError, setPasskeyRegistrationError] = useState(undefined);
+      return (
+        <PasskeysProvider fqAppPrefix="MODAL-TEST">
+          <div className="shell">
+            <header className="topbar">
+              <span className="topbar-wordmark">Quilibrium</span>
+              <div className="topbar-sep" />
+              <span className="topbar-title">passkey-modal / component test</span>
+              <div className="topbar-dot">
+                <div className="dot" style={window.__WASM_OK__ === false ? { background: 'var(--red)', boxShadow: '0 0 6px var(--red)' } : {}} />
+                <span>{window.__WASM_OK__ ? 'SDK + WASM ready' : window.__WASM_OK__ === false ? 'WASM failed' : 'SDK ready'}</span>
+              </div>
+            </header>
+            <ControlPanel />
+            <main className="stage">
+              <div className="stage-hero">
+                <div className="stage-hero-eyebrow">Component test harness</div>
+                <h1 className="stage-hero-title">Passkey<span>Modal</span></h1>
+                <p className="stage-hero-sub">
+                  Real component from dist/. Use the sidebar to open modal flows
+                  or inject state without an authenticator.
+                </p>
+                <div className="stage-instructions">
+                  <div className="step"><span className="step-num">1</span><span>Click <strong>Show Create</strong> or <strong>Show Import</strong> to open the modal</span></div>
+                  <div className="step"><span className="step-num">2</span><span>Use <strong>Force Success / Error</strong> to test all visual states without a real authenticator</span></div>
+                  <div className="step"><span className="step-num">3</span><span>The modal's own buttons (Continue, Cancel) drive real state, but WebAuthn requires HTTPS and a platform authenticator</span></div>
+                  <div className="step"><span className="step-num">4</span><span><a href="hook-test.html">Hook inspector</a> shows the state machine directly</span></div>
+                </div>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-4)', marginTop: 16, maxWidth: 440, lineHeight: 1.5 }}>
+                  This test page loads the real SDK from dist/ but runs outside a proper
+                  bundler. End-to-end passkey flows require HTTPS and a platform authenticator.
+                  Force Success/Error are the recommended way to verify modal UI states here.
+                </p>
+              </div>
+            </main>
+          </div>
+          <PasskeyModal
+            fqAppPrefix="MODAL-TEST"
+            getUserRegistration={mockGetUserRegistration}
+            uploadRegistration={mockUploadRegistration}
+          />
+        </PasskeysProvider>
+      );
+    };
 
-            // Global functions for testing
-            window.showModal = (type) => {
-                setPasskeyRegistrationComplete(undefined);
-                setPasskeyRegistrationError(undefined);
-                
-                switch (type) {
-                    case 'create':
-                        setShowPasskeyPrompt({ value: true, importMode: false });
-                        break;
-                    case 'import':
-                        setShowPasskeyPrompt({ value: true, importMode: true });
-                        break;
-                    case 'success':
-                        setShowPasskeyPrompt({ value: true, importMode: false });
-                        setPasskeyRegistrationComplete(true);
-                        break;
-                    case 'error':
-                        setShowPasskeyPrompt({ value: true, importMode: false });
-                        setPasskeyRegistrationComplete(false);
-                        setPasskeyRegistrationError('Mock error: Passkey registration failed. This is a test error message to show how error states look in the modal.');
-                        break;
-                }
-            };
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<ModalTestApp />);
+  </script>
 
-            window.hideModal = () => {
-                setShowPasskeyPrompt({ value: false, importMode: false });
-            };
-
-            const contextValue = {
-                showPasskeyPrompt,
-                setShowPasskeyPrompt,
-                passkeyRegistrationComplete,
-                setPasskeyRegistrationComplete,
-                passkeyRegistrationError,
-                setPasskeyRegistrationError,
-            };
-
-            return (
-                <PasskeysContext.Provider value={contextValue}>
-                    <div style={{ padding: '20px', textAlign: 'center' }}>
-                        <h1 style={{ color: 'white', marginTop: '100px', fontSize: '2rem', fontWeight: 'bold' }}>
-                            PasskeyModal Style Test
-                        </h1>
-                        <p style={{ color: 'white', marginTop: '20px', fontSize: '1.2rem' }}>
-                            Use the control panel to test different modal states
-                        </p>
-                    </div>
-                    <PasskeyModal fqAppPrefix="TEST" />
-                </PasskeysContext.Provider>
-            );
-        };
-
-        ReactDOM.render(<TestApp />, document.getElementById('root'));
-    </script>
+  <script type="importmap">
+  {
+    "imports": {
+      "buffer":          "https://esm.sh/buffer@6?bundle",
+      "crypto":          "https://esm.sh/crypto-browserify@3?bundle",
+      "react":           "./shims/react.js",
+      "react-dom":       "./shims/react-dom.js",
+      "react-dropzone":  "https://esm.sh/react-dropzone@14?external=react&bundle"
+    }
+  }
+  </script>
+  <script type="module">
+    import('../dist/index.esm.js')
+      .then(async sdk => {
+        // Initialize WASM before exposing SDK
+        try {
+          await sdk.channel_raw.default();
+          window.__WASM_OK__ = true;
+        } catch (e) {
+          console.warn('WASM init failed (crypto actions will not work):', e.message);
+          window.__WASM_OK__ = false;
+        }
+        window.__SDK__ = sdk;
+      })
+      .catch(err => { console.error('SDK load failed:', err); window.__SDK_ERROR__ = true; });
+  </script>
 </body>
 </html>

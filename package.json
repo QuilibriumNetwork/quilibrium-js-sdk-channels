@@ -1,16 +1,16 @@
 {
   "name": "@quilibrium/quilibrium-js-sdk-channels",
-  "version": "2.1.0-2",
+  "version": "2.1.1",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c && cp src/wasm/channelwasm_bg.wasm dist/channelwasm_bg.wasm",
     "dev": "rollup -c -w",
     "clean": "rimraf dist",
-    "test": "cd test && python3 -m http.server 3001",
+    "test": "node test/sdk-check.js && node test/serve.js",
     "test-build": "node test/create-build-test.js"
   },
   "files": [
@@ -34,6 +34,7 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.2",
     "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-typescript": "^12.1.2",
     "@rollup/plugin-wasm": "^6.2.2",
     "@types/node": "^24.0.15",
@@ -46,5 +47,6 @@
     "rollup-plugin-postcss": "^4.0.2",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

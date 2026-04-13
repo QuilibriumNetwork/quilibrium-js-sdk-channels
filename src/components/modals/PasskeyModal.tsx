@@ -1,59 +1,78 @@
-import React, { useState } from 'react';
-import { Buffer } from 'buffer';
-import {
-  completeRegistration,
-  register,
-  encryptDataSaveKey,
-  updateStoredPasskey,
-  createKeyFromBuffer,
-  encrypt,
-} from '../../passkeys/types';
+import React from 'react';
 import { usePasskeysContext } from '../context/PasskeysContext';
-import { sha256 } from 'multiformats/hashes/sha2';
-import { base58btc } from 'multiformats/bases/base58';
-import * as secureChannel from '../../channel/channel';
-import * as ch from '../../channel/channelwasm';
 import { useDropzone } from 'react-dropzone';
+import { usePasskeyFlow } from '../../hooks/usePasskeyFlow';
+import * as secureChannel from '../../channel/channel';
 import './PasskeyModal.css';
 
 export const PasskeyModal = ({
   fqAppPrefix,
   getUserRegistration,
   uploadRegistration,
-} : {
+}: {
   fqAppPrefix: string;
   getUserRegistration: (address: string) => Promise<secureChannel.UserRegistration>;
-  uploadRegistration: ({ address, registration, }: {
+  uploadRegistration: ({ address, registration }: {
     address: string;
     registration: secureChannel.UserRegistration;
   }) => Promise<void>;
 }) => {
   const {
     showPasskeyPrompt,
-    setShowPasskeyPrompt,
     passkeyRegistrationComplete,
-    setPasskeyRegistrationComplete,
     passkeyRegistrationError,
-    setPasskeyRegistrationError,
   } = usePasskeysContext();
-  const [keypair, setKeypair] = useState<string | undefined>();
-  const [id, setId] = useState<string | undefined>();
+
+  const hook = usePasskeyFlow({
+    fqAppPrefix,
+    getUserRegistration,
+    uploadRegistration,
+  });
 
   const { getRootProps, getInputProps, acceptedFiles, inputRef } = useDropzone({
-    accept: {
-      'text/plain': ['.key'],
-    },
+    accept: { 'text/plain': ['.key'] },
     minSize: 0,
     maxSize: 1 * 1024 * 1024,
   });
 
-  // @ts-ignore
-  if (window.electron) {
-    if (!window.localStorage.getItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`)) {
-      window.localStorage.setItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`, 'true');
+  // --- Button click dispatcher ---
+  // Maps the single "Continue" button to the appropriate hook action
+  // based on current step, preserving original multi-branch behavior.
+  const handlePrimaryClick = async () => {
+    switch (hook.step) {
+      case 'success':
+        hook.dismiss();
+        break;
+      case 'awaiting_completion':
+        await hook.completeRegistration();
+        break;
+      case 'ready_with_keypair':
+        await hook.startRegistration();
+        break;
+      case 'ready':
+        if (hook.isImportMode && acceptedFiles.length) {
+          await hook.importKeyFile(acceptedFiles[0]);
+        } else if (!hook.isImportMode) {
+          if (!hook.isPasskeySupported) {
+            await hook.proceedWithoutPasskey();
+          } else {
+            await hook.startRegistration();
+          }
+        }
+        break;
     }
-  }
+  };
 
+  // Clear the dropzone when file parse fails, so user can drop a new file.
+  // The original used (acceptedFiles as any[]).shift() which is a mutation hack.
+  // This approach resets the file input instead.
+  React.useEffect(() => {
+    if (hook.step === 'error' && hook.error?.code === 'invalid_key_file' && inputRef.current) {
+      inputRef.current.value = '';
+    }
+  }, [hook.step, hook.error]);
+
+  // --- Render (preserves exact original JSX structure and CSS classes) ---
   return (
     <div
       className={`passkey-modal-backdrop ${showPasskeyPrompt.value ? '' : 'hidden'}`}
@@ -67,7 +86,11 @@ export const PasskeyModal = ({
         <div className="passkey-modal-icon-wrapper">
           <div
             style={{
-              backgroundImage: passkeyRegistrationComplete !== false && passkeyRegistrationComplete !== true ? 'url("/passkey.png")' : undefined,
+              backgroundImage:
+                passkeyRegistrationComplete !== false &&
+                passkeyRegistrationComplete !== true
+                  ? 'url("/passkey.png")'
+                  : undefined,
             }}
             className={
               'passkey-modal-icon' +
@@ -105,10 +128,10 @@ export const PasskeyModal = ({
             </>
           ) : passkeyRegistrationComplete === true ? (
             'Your passkey has been successfully created.'
-          ) : id ? (
+          ) : hook.step === 'awaiting_completion' ? (
             'To save the account, you will need to perform one more passkey interaction. Tap continue to complete.'
           ) : showPasskeyPrompt.importMode ? (
-            keypair ? (
+            hook.step === 'ready_with_keypair' ? (
               "Use Passkeys to save your account, with the security of your own device's secure element. This will require two round-trips with your authenticator to complete to fully save the account."
             ) : (
               'To begin, import your existing key file. Drop it in the area below or click on the area below to select the file.'
@@ -119,12 +142,11 @@ export const PasskeyModal = ({
         </div>
         {showPasskeyPrompt.importMode &&
           !passkeyRegistrationComplete &&
-          !keypair && (
+          hook.step !== 'ready_with_keypair' &&
+          hook.step !== 'awaiting_completion' &&
+          hook.step !== 'registering' && (
             <div className="passkey-modal-content">
-              <div
-                className="passkey-modal-dropzone"
-                {...getRootProps()}
-              >
+              <div className="passkey-modal-dropzone" {...getRootProps()}>
                 <input {...getInputProps()} style={{ display: 'none' }} />
                 <div className="passkey-modal-dropzone-text">
                   {acceptedFiles.length
@@ -134,427 +156,45 @@ export const PasskeyModal = ({
               </div>
             </div>
           )}
+        {/* Primary "Continue" button - shown in import mode when file ready or complete */}
         {showPasskeyPrompt.importMode ? (
-          showPasskeyPrompt.importMode &&
-          (acceptedFiles.length || passkeyRegistrationComplete) ? (
-            <div
-              onClick={async () => {
-                if (passkeyRegistrationComplete) {
-                  setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-                } else if (id) {
-                  try {
-                    let pair = '';
-                    if (keypair) {
-                      pair = keypair;
-                    } else {
-                      pair = ch.js_generate_ed448();
-                      setKeypair(pair);
-                    }
-                    const p = JSON.parse(pair);
-                    const h = await sha256.digest(Buffer.from(p.public_key) as unknown as Uint8Array<ArrayBufferLike>);
-                    const address = base58btc.baseEncode(h.bytes);
-                    await completeRegistration(fqAppPrefix, {
-                      credentialId: id,
-                      largeBlob: Buffer.from(p.private_key).toString('hex'),
-                      publicKey: Buffer.from(p.public_key).toString('hex'),
-                      address: address,
-                    });
-                    const senderIdent = secureChannel.NewUserKeyset({
-                      type: 'ed448',
-                      private_key: [...p.private_key],
-                      public_key: [...p.public_key],
-                    });
-                    const senderDevice = await secureChannel.NewDeviceKeyset();
-                    let existing: secureChannel.UserRegistration | undefined;
-                    try {
-                      existing = (await getUserRegistration(address));
-                    } catch {}
-
-                    const senderRegistration =
-                      await secureChannel.ConstructUserRegistration(
-                        senderIdent,
-                        existing?.device_registrations ?? [],
-                        [senderDevice]
-                      );
-                    const key = await createKeyFromBuffer(
-                      new Uint8Array(p.private_key) as unknown as ArrayBuffer
-                    );
-                    const inner = await encrypt(
-                      Buffer.from(
-                        JSON.stringify({
-                          identity: senderIdent,
-                          device: senderDevice,
-                        }),
-                        'utf-8'
-                      ),
-                      key
-                    );
-                    const envelope = Buffer.from(
-                      JSON.stringify({
-                        iv: [...inner.iv],
-                        ciphertext: [...new Uint8Array(inner.ciphertext)],
-                      }),
-                      'utf-8'
-                    );
-                    await encryptDataSaveKey(2, envelope);
-                    uploadRegistration({
-                      address: address,
-                      registration: senderRegistration,
-                    });
-                    setPasskeyRegistrationComplete(true);
-                    setKeypair(undefined);
-                    setId(undefined);
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  } catch (e: any) {
-                    setPasskeyRegistrationComplete(false);
-                    setPasskeyRegistrationError(e.toString());
-                  }
-                } else if (keypair) {
-                  try {
-                    let pair = keypair;
-                    const p = JSON.parse(pair);
-                    const h = await sha256.digest(Buffer.from(p.public_key) as unknown as Uint8Array<ArrayBufferLike>);
-                    const r = await register(fqAppPrefix, base58btc.baseEncode(h.bytes));
-                    setId(r.id);
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  } catch (e: any) {
-                    setPasskeyRegistrationComplete(false);
-                    setPasskeyRegistrationError(e.toString());
-                  }
-                } else {
-                  try {
-                    const data = await acceptedFiles[0].arrayBuffer();
-                    let key: string;
-                    if (data.byteLength == 57) {
-                      key = Buffer.from(data).toString('hex');
-                    } else {
-                      key = Buffer.from(data).toString('utf-8');
-                    }
-
-                    if (key.length != 114) {
-                      if (key.startsWith('{')) {
-                        key = Buffer.from(
-                          new Uint8Array(JSON.parse(key).private_key)
-                        ).toString('hex');
-                      }
-                    }
-
-                    if (key.length != 114) {
-                      throw new Error(
-                        'Corrupted key file, try a different file or cancel and create a new account'
-                      );
-                    }
-
-                    const pubkey = Buffer.from(
-                      ch.js_get_pubkey_ed448(
-                        Buffer.from(key, 'hex').toString('base64')
-                      ),
-                      'base64'
-                    );
-
-                    setKeypair(
-                      JSON.stringify({
-                        public_key: [...new Uint8Array(pubkey)],
-                        private_key: [
-                          ...new Uint8Array(Buffer.from(key, 'hex')),
-                        ],
-                      })
-                    );
-                  } catch (e: any) {
-                    (acceptedFiles as any[]).shift();
-                    setPasskeyRegistrationComplete(false);
-                    setPasskeyRegistrationError(e.toString());
-                  }
-                }
-              }}
-              className="passkey-modal-btn primary"
-            >
+          acceptedFiles.length ||
+          passkeyRegistrationComplete ||
+          hook.step === 'ready_with_keypair' ||
+          hook.step === 'awaiting_completion' ? (
+            <div onClick={handlePrimaryClick} className="passkey-modal-btn primary">
               Continue
             </div>
           ) : (
             <></>
           )
-        ) : !window.localStorage.getItem(
-            `${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`
-          ) ? (
-          <div
-            onClick={async () => {
-              if (passkeyRegistrationComplete) {
-                setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-              } else if (id) {
-                try {
-                  let pair = '';
-                  if (keypair) {
-                    pair = keypair;
-                  } else {
-                    pair = ch.js_generate_ed448();
-                    setKeypair(pair);
-                  }
-                  const p = JSON.parse(pair);
-                  const h = await sha256.digest(Buffer.from(p.public_key) as unknown as Uint8Array<ArrayBufferLike>);
-                  const address = base58btc.baseEncode(h.bytes);
-                  await completeRegistration(
-                    fqAppPrefix,
-                    {
-                      credentialId: id,
-                      largeBlob: Buffer.from(p.private_key).toString('hex'),
-                      publicKey: Buffer.from(p.public_key).toString('hex'),
-                      address: address,
-                    },
-                  );
-                  const senderIdent = secureChannel.NewUserKeyset({
-                    type: 'ed448',
-                    private_key: [...p.private_key],
-                    public_key: [...p.public_key],
-                  });
-                  const senderDevice = await secureChannel.NewDeviceKeyset();
-                  let existing: secureChannel.UserRegistration | undefined;
-                  try {
-                    existing = (await getUserRegistration(address));
-                  } catch {}
-
-                  const senderRegistration =
-                    await secureChannel.ConstructUserRegistration(
-                      senderIdent,
-                      existing?.device_registrations ?? [],
-                      [senderDevice]
-                    );
-                  const key = await createKeyFromBuffer(
-                    new Uint8Array(p.private_key) as unknown as ArrayBuffer
-                  );
-                  const inner = await encrypt(
-                    Buffer.from(
-                      JSON.stringify({
-                        identity: senderIdent,
-                        device: senderDevice,
-                      }),
-                      'utf-8'
-                    ),
-                    key
-                  );
-                  const envelope = Buffer.from(
-                    JSON.stringify({
-                      iv: [...inner.iv],
-                      ciphertext: [...new Uint8Array(inner.ciphertext)],
-                    }),
-                    'utf-8'
-                  );
-                  await encryptDataSaveKey(2, envelope);
-                  uploadRegistration({
-                    address: address,
-                    registration: senderRegistration,
-                  });
-                  setPasskeyRegistrationComplete(true);
-                  setKeypair(undefined);
-                  setId(undefined);
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                } catch (e: any) {
-                  setPasskeyRegistrationComplete(false);
-                  setPasskeyRegistrationError(e.toString());
-                }
-              } else {
-                try {
-                  let pair = '';
-                  if (keypair) {
-                    pair = keypair;
-                  } else {
-                    pair = ch.js_generate_ed448();
-                    setKeypair(pair);
-                  }
-                  const p = JSON.parse(pair);
-                  const h = await sha256.digest(Buffer.from(p.public_key) as unknown as Uint8Array<ArrayBufferLike>);
-                  const r = await register(fqAppPrefix, base58btc.baseEncode(h.bytes));
-                  setId(r.id);
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                } catch (e: any) {
-                  setPasskeyRegistrationComplete(false);
-                  setPasskeyRegistrationError(e.toString());
-                }
-              }
-            }}
-            className="passkey-modal-btn primary"
-          >
+        ) : !hook.isPasskeySupported ? (
+          // Incompatibility fallback: show Continue that does proceedWithoutPasskey
+          <div onClick={handlePrimaryClick} className="passkey-modal-btn primary">
             Continue
           </div>
         ) : (
-          <></>
+          // Normal passkey flow: show Continue
+          <div onClick={handlePrimaryClick} className="passkey-modal-btn primary">
+            Continue
+          </div>
         )}
+        {/* "Proceed Without Passkeys" warning button */}
+        {/* Original condition: passkeyRegistrationError && (!importMode || keypair) */}
+        {/* keypair being set maps to ready_with_keypair or later steps with keypair */}
         {passkeyRegistrationError &&
-          (!showPasskeyPrompt.importMode || keypair) && (
+          (!showPasskeyPrompt.importMode || hook.hasKeypair) && (
             <div
-              onClick={async () => {
-                window.localStorage.setItem(
-                  `${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`,
-                  'true'
-                );
-                let pair = '';
-                if (keypair) {
-                  pair = keypair;
-                } else {
-                  pair = ch.js_generate_ed448();
-                  setKeypair(pair);
-                }
-                const p = JSON.parse(pair);
-                const h = await sha256.digest(Buffer.from(p.public_key) as unknown as Uint8Array<ArrayBufferLike>);
-                const address = base58btc.baseEncode(h.bytes);
-                setId('not-passkey');
-                await encryptDataSaveKey(
-                  1,
-                  Buffer.from(new Uint8Array(p.private_key))
-                );
-
-                updateStoredPasskey('not-passkey', {
-                  credentialId: 'not-passkey',
-                  address: address,
-                  publicKey: p.publicKey,
-                  completedOnboarding: false,
-                });
-                const senderIdent = secureChannel.NewUserKeyset({
-                  type: 'ed448',
-                  private_key: [...p.private_key],
-                  public_key: [...p.public_key],
-                });
-                const senderDevice = await secureChannel.NewDeviceKeyset();
-                let existing: secureChannel.UserRegistration | undefined;
-                try {
-                  existing = (await getUserRegistration(address));
-                } catch {}
-
-                const senderRegistration =
-                  await secureChannel.ConstructUserRegistration(
-                    senderIdent,
-                    existing?.device_registrations ?? [],
-                    [senderDevice]
-                  );
-                const key = await createKeyFromBuffer(
-                  new Uint8Array(p.private_key) as unknown as ArrayBuffer
-                );
-                const inner = await encrypt(
-                  Buffer.from(
-                    JSON.stringify({
-                      identity: senderIdent,
-                      device: senderDevice,
-                    }),
-                    'utf-8'
-                  ),
-                  key
-                );
-                const envelope = Buffer.from(
-                  JSON.stringify({
-                    iv: [...inner.iv],
-                    ciphertext: [...new Uint8Array(inner.ciphertext)],
-                  }),
-                  'utf-8'
-                );
-                await encryptDataSaveKey(2, envelope);
-                uploadRegistration({
-                  address: address,
-                  registration: senderRegistration,
-                });
-                setPasskeyRegistrationComplete(true);
-                setKeypair(undefined);
-                setId(undefined);
-                setPasskeyRegistrationError(undefined);
-              }}
+              onClick={() => hook.proceedWithoutPasskey()}
               className="passkey-modal-btn warning"
             >
               Proceed Without Passkeys
             </div>
           )}
-        {window.localStorage.getItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`) &&
-          !showPasskeyPrompt.importMode && (
-            <div
-              onClick={async () => {
-                if (passkeyRegistrationComplete) {
-                  setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-                  return;
-                }
-                window.localStorage.setItem(
-                  `${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`,
-                  'true'
-                );
-                let pair = '';
-                if (keypair) {
-                  pair = keypair;
-                } else {
-                  pair = ch.js_generate_ed448();
-                  setKeypair(pair);
-                }
-                const p = JSON.parse(pair);
-                const h = await sha256.digest(Buffer.from(p.public_key) as unknown as Uint8Array<ArrayBufferLike>);
-                const address = base58btc.baseEncode(h.bytes);
-                setId('not-passkey');
-                await encryptDataSaveKey(
-                  1,
-                  Buffer.from(new Uint8Array(p.private_key))
-                );
-
-                updateStoredPasskey('not-passkey', {
-                  credentialId: 'not-passkey',
-                  address: address,
-                  publicKey: p.publicKey,
-                  completedOnboarding: false,
-                });
-                const senderIdent = secureChannel.NewUserKeyset({
-                  type: 'ed448',
-                  private_key: [...p.private_key],
-                  public_key: [...p.public_key],
-                });
-                const senderDevice = await secureChannel.NewDeviceKeyset();
-                let existing: secureChannel.UserRegistration | undefined;
-                try {
-                  existing = (await getUserRegistration(address));
-                } catch {}
-
-                const senderRegistration =
-                  await secureChannel.ConstructUserRegistration(
-                    senderIdent,
-                    existing?.device_registrations ?? [],
-                    [senderDevice]
-                  );
-                const key = await createKeyFromBuffer(
-                  new Uint8Array(p.private_key) as unknown as ArrayBuffer
-                );
-                const inner = await encrypt(
-                  Buffer.from(
-                    JSON.stringify({
-                      identity: senderIdent,
-                      device: senderDevice,
-                    }),
-                    'utf-8'
-                  ),
-                  key
-                );
-                const envelope = Buffer.from(
-                  JSON.stringify({
-                    iv: [...inner.iv],
-                    ciphertext: [...new Uint8Array(inner.ciphertext)],
-                  }),
-                  'utf-8'
-                );
-                await encryptDataSaveKey(2, envelope);
-                uploadRegistration({
-                  address: address,
-                  registration: senderRegistration,
-                });
-                setPasskeyRegistrationComplete(true);
-                setKeypair(undefined);
-                setId(undefined);
-                setPasskeyRegistrationError(undefined);
-              }}
-              className="passkey-modal-btn primary"
-            >
-              Continue
-            </div>
-          )}
+        {/* Cancel button */}
         {!passkeyRegistrationComplete && (
           <div
-            onClick={async () => {
-              setPasskeyRegistrationError(undefined);
-              setPasskeyRegistrationComplete(undefined);
-              setKeypair(undefined);
-              setShowPasskeyPrompt({ ...showPasskeyPrompt, value: false });
-            }}
+            onClick={() => hook.cancel()}
             className="passkey-modal-btn secondary"
           >
             Cancel

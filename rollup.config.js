@@ -1,6 +1,7 @@
 import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import replace from '@rollup/plugin-replace';
 import wasm from '@rollup/plugin-wasm';
 import dts from 'rollup-plugin-dts';
 import postcss from 'rollup-plugin-postcss';
@@ -25,6 +26,10 @@ export default [
         minimize: true,
       }),
       typescript(),
+      replace({
+        preventAssignment: true,
+        'process.env.NODE_ENV': JSON.stringify('production'),
+      }),
       resolve(),
       commonjs(),
       wasm({
