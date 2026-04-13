@@ -518,6 +518,17 @@
     root.render(<ModalTestApp />);
   </script>
 
+  <script type="importmap">
+  {
+    "imports": {
+      "buffer":          "https://esm.sh/buffer@6?bundle",
+      "crypto":          "https://esm.sh/crypto-browserify@3?bundle",
+      "react":           "https://esm.sh/react@18?bundle",
+      "react-dom":       "https://esm.sh/react-dom@18?bundle",
+      "react-dropzone":  "https://esm.sh/react-dropzone@14?bundle"
+    }
+  }
+  </script>
   <script type="module">
     import('../dist/index.esm.js')
       .then(sdk => { window.__SDK__ = sdk; })
