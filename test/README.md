@@ -1,110 +1,80 @@
-# PasskeyModal Testing
+# Passkey Test Pages
 
-Testing environment for the PasskeyModal component with both development and production build testing capabilities.
+Two visual test pages for the SDK, both served by `yarn test`.
 
 ## Quick Start
 
-### Development Testing
-For testing styling changes during development:
-
 ```bash
-yarn test
+yarn build       # build the SDK first (required -- test pages load from dist/)
+yarn test        # serve test/ on http://localhost:3001
 ```
 
-### Production Build Testing
-For testing the actual built CSS and ensuring build integrity:
+Then open:
+
+- `http://localhost:3001` -- PasskeyModal full component test
+- `http://localhost:3001/hook-test.html` -- usePasskeyFlow hook inspector
+
+For build-verified testing (same as CI):
 
 ```bash
-yarn test-build
+yarn test-build  # full build + serve
 ```
 
-This command will:
-1. Run `yarn build` to compile the project
-2. Generate `test-build.html` using the actual built CSS from `dist/index.css`
-3. Start a server on `http://localhost:3001`
+---
 
-### Manual Server Setup
-Or serve directly with any HTTP server:
+## Test Pages
 
-```bash
-cd test
-python3 -m http.server 3001
-# or
-npx http-server . -p 3001
-```
+### `index.html` -- PasskeyModal Visual Test
 
-## Test Features
+Tests the real `PasskeyModal` component loaded from `dist/index.esm.js`.
 
-### Control Panel
-Use the control panel (top-left) to test different modal states:
+**Control panel:**
+- **Show Create Modal** -- opens the modal in new-account flow
+- **Show Import Modal** -- opens the modal in import flow (with .key file dropzone)
+- **Hide Modal** -- closes the modal
+- **Force Success State** -- injects success context values; no authenticator needed (UI-only test)
+- **Force Error State** -- injects error context values with a sample error message; no authenticator needed
 
-- **Show Create Modal** - Default passkey creation flow
-- **Show Import Modal** - Key import flow with file dropzone  
-- **Show Success State** - Successful registration state
-- **Show Error State** - Error state with sample error message
-- **Hide Modal** - Close the modal
+**Status panel** shows live context values: visible, importMode, complete, error.
 
-### Current Styling
-- **Modern Responsive Design** - Clean, professional modal with backdrop blur
-- **Key Icon** - Uses `passkey.png` background image with proper centering and pulsating animation
-- **Button Colors** - Professional color scheme:
-  - Continue: Blue (`#0287F2`)
-  - Proceed Without Passkeys: Amber (`#d97706`)
-  - Cancel: Gray (`#9ca3af`)
-- **Layout** - CSS-only styling with proper overflow handling
-- **No Horizontal Scrolling** - Fixed container width with `overflow-x: hidden` and `box-sizing: border-box`
+The modal's own buttons (Continue, Cancel, Proceed Without Passkeys) drive state normally -- no mocking. Clicking "Continue" will trigger a real WebAuthn prompt.
 
-### Modal States
+> **Note:** `yarn test-build` generates `test-build.html` via `test/create-build-test.js`. That page renders modal states using raw DOM + hardcoded CSS class names (no React, no real component). It is a CSS smoke test for the build pipeline, not a functional component test. Use `index.html` for component testing.
 
-1. **Default State** - Pulsating passkey icon with animation
-2. **Import Mode** - File dropzone for key import  
-3. **Success State** - Green checkmark with success message
-4. **Error State** - Red exclamation with error details and options
+**Test flows:**
+1. Create flow: Show Create Modal > Continue > (passkey prompt) > Continue > success
+2. Import flow: Show Import Modal > drop .key file > Continue > (passkey prompt) > success
+3. Error flow: Show Create Modal > cancel the passkey prompt > error state > Proceed Without Passkeys
+4. Cancel: Show Create Modal > Cancel > modal closes cleanly; reopen shows fresh state
 
-### Responsive Design
-- **Desktop** - 500px wide modal
-- **Mobile** - 300px wide modal with responsive scaling
+---
 
-## Development Workflow
+### `hook-test.html` -- usePasskeyFlow Hook Inspector
 
-### For Style Development
-1. **Edit styling** in `src/components/modals/PasskeyModal.css`
-2. **Test changes** using `yarn test` (serves from source CSS files)
-3. **Verify build** using `yarn test-build` (tests actual compiled CSS)
+Tests the `usePasskeyFlow` hook directly, without `PasskeyModal`. Useful for verifying the state machine in isolation.
 
-### Two Testing Modes
+**State panel** shows all hook return values live: `step`, `error`, `address`, `isImportMode`, `isPasskeySupported`, `canRetry`.
 
-#### Development Mode (`yarn test`)
-- Uses source CSS files directly (`PasskeyModal.css`)
-- Faster iteration for styling changes
-- No build step required
+**Action buttons** are wired to every hook method:
+- `startRegistration()` -- triggers first WebAuthn prompt
+- `completeRegistration()` -- triggers second WebAuthn prompt (enabled only when `step: awaiting_completion`)
+- `proceedWithoutPasskey()` -- fallback flow
+- `importKeyFile()` -- file picker for .key files
+- `retry()` -- enabled only when `canRetry: true`
+- `cancel()` / `dismiss()`
 
-#### Production Mode (`yarn test-build`)
-- Runs full build process first
-- Uses compiled CSS from `dist/index.css`
-- Verifies that build process works correctly
-- Tests actual CSS that will be shipped
+**Event log** records all `onStepChange`, `onComplete`, `onError`, `onCancel` callback fires with timestamps.
 
-### Recent Fixes
-- ✅ **Horizontal Scrolling Fixed** - Added `overflow-x: hidden` and `box-sizing: border-box`
-- ✅ **Dropzone Overflow Fixed** - Proper width containment for file upload area
-- ✅ **Build Process** - CSS compilation works correctly with PostCSS plugin
-
-## Files
-
-- `index.html` - Development test page with inline PasskeyModal component for rapid iteration
-- `test-build.html` - Generated production test page (created by `yarn test-build`)
-- `create-build-test.js` - Script that builds project and generates production test
-- `PasskeyModal.css` - Copy of source CSS for development testing
-- `README.md` - This documentation
+---
 
 ## Architecture
 
 - **Source CSS**: `src/components/modals/PasskeyModal.css`
-- **Built CSS**: `dist/index.css` (compiled with PostCSS)
-- **Test CSS**: `test/PasskeyModal.css` (copy for development)
+- **Built CSS**: `dist/index.css` (compiled with PostCSS) -- used by both test pages
+- **Built SDK**: `dist/index.esm.js` -- loaded as ES module, exposed as `window.__SDK__`
 
-Uses CDN links for React - no complex build dependencies for testing!
+Both pages use CDN React + Babel standalone for JSX -- no extra build dependencies.
 
 ---
-*Updated: 2025-07-22*
+
+*Updated: 2026-04-13*

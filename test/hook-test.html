@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>usePasskeyFlow Hook Inspector</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="../dist/index.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+      color: #e0e0e0;
+    }
+    h1 { color: #60a5fa; font-size: 1.4rem; margin: 0 0 16px 0; }
+    h2 { color: #93c5fd; font-size: 1rem; margin: 0 0 10px 0; }
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 900px; margin: 0 auto; }
+    .panel {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .state-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
+    .state-key { color: #9ca3af; }
+    .state-value { color: #f0f0f0; font-family: monospace; }
+    .state-value.step { color: #34d399; font-weight: bold; }
+    .state-value.error { color: #f87171; }
+    .state-value.null { color: #6b7280; font-style: italic; }
+    .state-value.bool-true { color: #34d399; }
+    .state-value.bool-false { color: #f87171; }
+    .actions { display: flex; flex-direction: column; gap: 8px; }
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-align: left;
+      transition: opacity 0.15s;
+    }
+    button:disabled { opacity: 0.35; cursor: default; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-success { background: #059669; color: white; }
+    .btn-warning { background: #d97706; color: white; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-secondary { background: #4b5563; color: white; }
+    .btn-file { background: #7c3aed; color: white; }
+    .log {
+      background: rgba(0,0,0,0.3);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      max-height: 180px;
+      overflow-y: auto;
+      color: #d1d5db;
+    }
+    .log-entry { margin-bottom: 4px; }
+    .log-entry .ts { color: #6b7280; margin-right: 8px; }
+    .log-entry .step-change { color: #60a5fa; }
+    .log-entry .err { color: #f87171; }
+    .log-entry .ok { color: #34d399; }
+    .notice {
+      background: rgba(251,191,36,0.1);
+      border: 1px solid rgba(251,191,36,0.3);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      color: #fbbf24;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    // NOTE: This page uses the built SDK from dist/.
+    // Run `yarn build` before testing, or `yarn dev` for watch mode.
+    // The SDK is loaded via a module script below — Babel transpiles JSX only.
+
+    const { useState, useEffect, useCallback, createRef } = React;
+
+    const HookInspector = () => {
+      const [sdkReady, setSdkReady] = useState(false);
+      const [log, setLog] = useState([]);
+
+      const addLog = useCallback((type, msg) => {
+        const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+        setLog(prev => [...prev.slice(-49), { ts, type, msg }]);
+      }, []);
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          if (window.__SDK__) { setSdkReady(true); clearInterval(interval); }
+        }, 100);
+        return () => clearInterval(interval);
+      }, []);
+
+      if (!sdkReady) {
+        return (
+          <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>
+            <p>Loading SDK from <code>../dist/index.esm.js</code>...</p>
+            <p style={{ fontSize: '0.8rem' }}>If this doesn't resolve, run <code>yarn build</code> first.</p>
+          </div>
+        );
+      }
+
+      const { PasskeysProvider, usePasskeyFlow } = window.__SDK__;
+
+      const FlowTester = () => {
+        const fileInputRef = createRef();
+
+        const mockGetUserRegistration = useCallback(async (address) => {
+          addLog('ok', `getUserRegistration called: ${address.slice(0,12)}...`);
+          return { address, registrations: [] };
+        }, []);
+
+        const mockUploadRegistration = useCallback(async ({ address }) => {
+          addLog('ok', `uploadRegistration called: ${address.slice(0,12)}...`);
+        }, []);
+
+        const hook = usePasskeyFlow({
+          fqAppPrefix: 'HOOK-TEST',
+          getUserRegistration: mockGetUserRegistration,
+          uploadRegistration: mockUploadRegistration,
+          onStepChange: (step) => addLog('step-change', `step -> ${step}`),
+          onComplete: () => addLog('ok', 'onComplete fired'),
+          onError: (err) => addLog('err', `onError: ${err.code} - ${err.rawMessage ?? ''}`),
+          onCancel: () => addLog('ok', 'onCancel fired'),
+        });
+
+        const handleFileImport = (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            addLog('ok', `importing file: ${file.name}`);
+            hook.importKeyFile(file);
+          }
+        };
+
+        const val = (v) => {
+          if (v === null || v === undefined) return <span className="state-value null">null</span>;
+          if (typeof v === 'boolean') return <span className={`state-value bool-${v}`}>{String(v)}</span>;
+          if (typeof v === 'string' && v === hook.step) return <span className="state-value step">{v}</span>;
+          return <span className="state-value">{String(v)}</span>;
+        };
+
+        return (
+          <div className="layout">
+            <div>
+              <div className="notice">
+                Actions that call WebAuthn (startRegistration, completeRegistration) will trigger
+                a real browser passkey prompt. Make sure you're on localhost or HTTPS.
+              </div>
+
+              <div className="panel" style={{ marginBottom: 16 }}>
+                <h2>Hook State</h2>
+                {[
+                  ['step', hook.step],
+                  ['error.code', hook.error?.code ?? null],
+                  ['error.rawMessage', hook.error?.rawMessage ?? null],
+                  ['address', hook.address ? hook.address.slice(0,16) + '...' : null],
+                  ['isImportMode', hook.isImportMode],
+                  ['isPasskeySupported', hook.isPasskeySupported],
+                  ['canRetry', hook.canRetry],
+                ].map(([k, v]) => (
+                  <div className="state-row" key={k}>
+                    <span className="state-key">{k}</span>
+                    {val(v)}
+                  </div>
+                ))}
+              </div>
+
+              <div className="panel">
+                <h2>Event Log</h2>
+                <div className="log">
+                  {log.length === 0 && <div style={{ color: '#6b7280' }}>No events yet.</div>}
+                  {log.map((entry, i) => (
+                    <div className="log-entry" key={i}>
+                      <span className="ts">{entry.ts}</span>
+                      <span className={entry.type}>{entry.msg}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="panel">
+              <h2>Actions</h2>
+              <div className="actions">
+                <button className="btn-primary" onClick={() => hook.startRegistration()}>
+                  startRegistration()
+                </button>
+                <button
+                  className="btn-success"
+                  onClick={() => hook.completeRegistration()}
+                  disabled={hook.step !== 'awaiting_completion'}
+                >
+                  completeRegistration() <small>(requires step: awaiting_completion)</small>
+                </button>
+                <button className="btn-warning" onClick={() => hook.proceedWithoutPasskey()}>
+                  proceedWithoutPasskey()
+                </button>
+                <button
+                  className="btn-file"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  importKeyFile() -- pick .key file
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".key"
+                  style={{ display: 'none' }}
+                  onChange={handleFileImport}
+                />
+                <button
+                  className="btn-secondary"
+                  onClick={() => hook.retry()}
+                  disabled={!hook.canRetry}
+                >
+                  retry() <small>(requires canRetry: true)</small>
+                </button>
+                <button className="btn-secondary" onClick={() => hook.cancel()}>
+                  cancel()
+                </button>
+                <button className="btn-secondary" onClick={() => hook.dismiss()}>
+                  dismiss()
+                </button>
+                <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0' }} />
+                <button
+                  className="btn-danger"
+                  onClick={() => {
+                    setLog([]);
+                    addLog('ok', 'log cleared');
+                  }}
+                  style={{ fontSize: '0.75rem' }}
+                >
+                  Clear log
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      return (
+        <PasskeysProvider fqAppPrefix="HOOK-TEST">
+          <div style={{ maxWidth: 900, margin: '0 auto' }}>
+            <h1>usePasskeyFlow -- Hook Inspector</h1>
+            <FlowTester />
+          </div>
+        </PasskeysProvider>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<HookInspector />);
+  </script>
+
+  <!-- Load the built SDK as an ES module and expose it as a global for the Babel script above -->
+  <script type="module">
+    import * as SDK from '../dist/index.esm.js';
+    window.__SDK__ = SDK;
+  </script>
+</body>
+</html>
