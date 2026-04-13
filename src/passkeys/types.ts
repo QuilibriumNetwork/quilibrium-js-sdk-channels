@@ -206,16 +206,20 @@ export const register = async (fqAppPrefix: string, account: string) => {
     id: Buffer.from(credential.rawId).toString('base64'),
     // @ts-expect-error passkeys
     rawId: Buffer.from(credential.rawId).toString('base64'),
+    authtype,
   };
 };
 
 export const completeRegistration = async (
   fqAppPrefix: string,
-  request: PasskeyAuthenticationRequestLargeBlob
+  request: PasskeyAuthenticationRequestLargeBlob,
+  authtype?: string | null
 ) => {
   const challenge = new Uint8Array(32);
   window.crypto.getRandomValues(challenge);
-  const authtype = await isPasskeysSupported();
+  if (!authtype) {
+    authtype = await isPasskeysSupported();
+  }
 
   if (window.localStorage.getItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`)) {
     await encryptDataSaveKey(1, Buffer.from(request.largeBlob, 'utf-8'));
@@ -518,6 +522,7 @@ export const isPasskeysSupported = async () => {
 
 export interface PasskeyRegistrationResult {
   id: string;
+  authtype: string | null;
 }
 
 export interface PasskeyAuthenticationRequestLargeBlob {
