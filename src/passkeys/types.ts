@@ -137,10 +137,7 @@ export const updateStoredPasskey = async (
     passkeys = JSON.parse(passkeysList);
   }
 
-  if (passkeys.filter((p) => p.credentialId === credentialId)) {
-    passkeys = passkeys.filter((p) => p.credentialId !== credentialId);
-  }
-
+  passkeys = passkeys.filter((p) => p.credentialId !== credentialId);
   passkeys.push(storedPasskey);
 
   window.localStorage.setItem('passkeys-list', JSON.stringify(passkeys));
