@@ -62,11 +62,15 @@ export async function createKeyFromBuffer(
   );
 }
 
-export async function encryptDataSaveKey(id: number, data: Buffer) {
-  var keys = await makeKeys();
-  var encrypted = await encrypt(data, keys);
-  callOnStore((store: IDBObjectStore) => {
-    store.put({ id: id, keys: keys, encrypted: encrypted });
+export function encryptDataSaveKey(id: number, data: Buffer): Promise<void> {
+  return new Promise(async (resolve, reject) => {
+    const keys = await makeKeys();
+    const encrypted = await encrypt(data, keys);
+    callOnStore((store: IDBObjectStore) => {
+      const req = store.put({ id: id, keys: keys, encrypted: encrypted });
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
   });
 }
 
