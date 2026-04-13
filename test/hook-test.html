@@ -700,8 +700,18 @@
                 <div className="panel-header"><span className="panel-title">Try these actions</span></div>
                 <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
 
+                  <div className="notice" style={{ marginBottom: 6 }}>
+                    <span className="notice-icon">!</span>
+                    <span>
+                      Actions will transition the state machine and then fail with an error
+                      (crypto polyfill limitation in the browser). This is normal. The diagnostics
+                      above confirm the SDK internals work. Full end-to-end flows require the real
+                      app on HTTPS.
+                    </span>
+                  </div>
+
                   <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginBottom: 4 }}>
-                    Each button calls a hook method. Watch the state machine and event log on the left to see what happens.
+                    Each button calls a hook method. Watch the state machine and event log on the left.
                   </div>
 
                   <button className="action-btn ab-primary" onClick={async () => { await ensureOpen(false); hook.startRegistration(); }}>
@@ -747,13 +757,6 @@
                   </button>
 
                   <div className="action-divider" />
-
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-4)', lineHeight: 1.5, padding: '8px 0' }}>
-                    <strong style={{ color: 'var(--text-3)' }}>Expected behavior:</strong> Actions will transition the state machine
-                    and then fail with an error (crypto polyfill limitation in the browser).
-                    This is normal. The diagnostics above confirm the SDK internals work.
-                    Full end-to-end flows require the real app on HTTPS.
-                  </div>
 
                   <a href="index.html" className="action-btn ab-primary" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', marginTop: 4 }}>
                     <div className="btn-accent" />
