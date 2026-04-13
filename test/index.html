@@ -3,60 +3,343 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PasskeyModal Visual Test</title>
+  <title>PasskeyModal — Component Test</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Syne:wght@600;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link rel="stylesheet" href="../dist/index.css">
   <style>
+    :root {
+      --bg:        #0a0a0b;
+      --bg-panel:  #111114;
+      --bg-raised: #18181d;
+      --border:    #2a2a35;
+      --border-hi: #3d3d50;
+      --text:      #e8e6f0;
+      --text-dim:  #6b6880;
+      --text-mid:  #9d9ab0;
+      --amber:     #f5a623;
+      --amber-dim: rgba(245,166,35,0.12);
+      --green:     #39d98a;
+      --green-dim: rgba(57,217,138,0.10);
+      --red:       #f25c5c;
+      --red-dim:   rgba(242,92,92,0.10);
+      --blue:      #6e8efb;
+      --mono:      'IBM Plex Mono', monospace;
+      --display:   'Syne', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: var(--mono);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      /* scanline texture */
+      background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.012) 2px,
+        rgba(255,255,255,0.012) 4px
+      );
+    }
+
+    /* ---- LOADING ---- */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 20px;
+    }
+    .loading-wordmark {
+      font-family: var(--display);
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .loading-bar-wrap {
+      width: 200px;
+      height: 2px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    .loading-bar {
+      height: 100%;
+      background: var(--amber);
+      animation: loadbar 1.8s ease-in-out infinite;
+      transform-origin: left;
+    }
+    @keyframes loadbar {
+      0%   { transform: scaleX(0) translateX(0%); opacity: 1; }
+      60%  { transform: scaleX(1) translateX(0%); opacity: 1; }
+      100% { transform: scaleX(1) translateX(110%); opacity: 0; }
+    }
+    .loading-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+    .loading-error {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--red);
+      text-align: center;
+      max-width: 340px;
+      line-height: 1.6;
+    }
+    .loading-error code {
+      display: block;
+      margin-top: 6px;
+      color: var(--text-mid);
+      background: var(--bg-raised);
+      padding: 6px 10px;
+      border-radius: 4px;
+    }
+
+    /* ---- LAYOUT ---- */
+    .shell {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      grid-template-rows: 52px 1fr;
       min-height: 100vh;
     }
-    .control-panel {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-      z-index: 10001;
-      min-width: 180px;
+
+    /* ---- TOPBAR ---- */
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-panel);
     }
-    .control-panel h3 { margin: 0 0 14px 0; font-size: 1rem; font-weight: 600; }
-    .control-panel button {
+    .topbar-wordmark {
+      font-family: var(--display);
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .topbar-sep {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+    }
+    .topbar-title {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+    .topbar-dot {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+    }
+    .topbar-dot .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ---- SIDEBAR ---- */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: var(--bg-panel);
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow-y: auto;
+    }
+    .sidebar-section {
+      padding: 0 16px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .sidebar-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .sidebar-label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .sidebar-btn {
       display: block;
       width: 100%;
-      margin-bottom: 8px;
-      padding: 8px 14px;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 5px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-mid);
+      font-family: var(--mono);
+      font-size: 0.72rem;
       cursor: pointer;
-      font-size: 0.85rem;
+      text-align: left;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
-    .control-panel button:hover { background: #2563eb; }
-    .control-panel button:last-child { margin-bottom: 0; }
-    .status {
-      margin-top: 14px;
-      padding: 8px;
-      background: #f3f4f6;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      color: #374151;
-      font-family: monospace;
+    .sidebar-btn:last-child { margin-bottom: 0; }
+    .sidebar-btn:hover {
+      border-color: var(--border-hi);
+      color: var(--text);
+      background: var(--bg-raised);
     }
-    .hero {
-      padding-top: 120px;
+    .sidebar-btn.btn-success {
+      border-color: rgba(57,217,138,0.25);
+      color: var(--green);
+    }
+    .sidebar-btn.btn-success:hover {
+      background: var(--green-dim);
+      border-color: var(--green);
+    }
+    .sidebar-btn.btn-danger {
+      border-color: rgba(242,92,92,0.25);
+      color: var(--red);
+    }
+    .sidebar-btn.btn-danger:hover {
+      background: var(--red-dim);
+      border-color: var(--red);
+    }
+
+    /* ---- STATUS READOUT ---- */
+    .status-block {
+      padding: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .status-row:last-child { border-bottom: none; }
+    .status-key { color: var(--text-dim); }
+    .status-val { color: var(--text-mid); }
+    .status-val.true  { color: var(--green); }
+    .status-val.false { color: var(--red); }
+    .status-val.yes   { color: var(--red); }
+
+    /* ---- MAIN STAGE ---- */
+    .stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* grid pattern background */
+    .stage::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(110,142,251,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(110,142,251,0.04) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+    }
+
+    .stage-hero {
       text-align: center;
-      color: white;
+      position: relative;
+      z-index: 1;
     }
-    .hero h1 { font-size: 1.8rem; margin: 0 0 10px 0; }
-    .hero p { font-size: 1rem; opacity: 0.85; }
+    .stage-hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+    .stage-hero-title {
+      font-family: var(--display);
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+    .stage-hero-title span {
+      color: var(--amber);
+    }
+    .stage-hero-sub {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+      max-width: 360px;
+      margin: 0 auto 32px;
+    }
+
+    .stage-instructions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-start;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 20px;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      max-width: 400px;
+      width: 100%;
+    }
+    .stage-instructions .step {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      line-height: 1.5;
+    }
+    .stage-instructions .step-num {
+      color: var(--amber);
+      flex-shrink: 0;
+      width: 14px;
+    }
+    .stage-instructions a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+    .stage-instructions a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -65,24 +348,45 @@
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
 
+    const LoadingScreen = ({ error }) => (
+      <div className="loading-screen">
+        <div className="loading-wordmark">Quilibrium SDK</div>
+        {error ? (
+          <div className="loading-error">
+            Failed to load SDK module.
+            <code>Run `yarn build` from the project root, then refresh.</code>
+          </div>
+        ) : (
+          <>
+            <div className="loading-bar-wrap"><div className="loading-bar" /></div>
+            <div className="loading-label">loading dist/index.esm.js</div>
+          </>
+        )}
+      </div>
+    );
+
     const ModalTestApp = () => {
       const [sdkReady, setSdkReady] = useState(false);
+      const [sdkError, setSdkError] = useState(false);
 
       useEffect(() => {
+        let attempts = 0;
         const interval = setInterval(() => {
-          if (window.__SDK__) { setSdkReady(true); clearInterval(interval); }
+          if (window.__SDK__) {
+            setSdkReady(true);
+            clearInterval(interval);
+          } else if (window.__SDK_ERROR__) {
+            setSdkError(true);
+            clearInterval(interval);
+          } else if (++attempts > 80) { // 8 seconds
+            setSdkError(true);
+            clearInterval(interval);
+          }
         }, 100);
         return () => clearInterval(interval);
       }, []);
 
-      if (!sdkReady) {
-        return (
-          <div style={{ padding: 40, textAlign: 'center', color: 'white' }}>
-            <p>Loading SDK from <code>../dist/index.esm.js</code>...</p>
-            <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>Run <code>yarn build</code> if this persists.</p>
-          </div>
-        );
-      }
+      if (!sdkReady) return <LoadingScreen error={sdkError} />;
 
       const { PasskeysProvider, usePasskeysContext, PasskeyModal } = window.__SDK__;
 
@@ -91,44 +395,75 @@
         const { showPasskeyPrompt, setShowPasskeyPrompt } = ctx;
 
         return (
-          <div className="control-panel">
-            <h3>PasskeyModal Tests</h3>
-            <button onClick={() => setShowPasskeyPrompt({ value: true, importMode: false })}>
-              Show Create Modal
-            </button>
-            <button onClick={() => setShowPasskeyPrompt({ value: true, importMode: true })}>
-              Show Import Modal
-            </button>
-            <button onClick={() => setShowPasskeyPrompt({ value: false, importMode: false })}>
-              Hide Modal
-            </button>
-            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '8px 0' }} />
-            <small style={{ color: '#6b7280', display: 'block', marginBottom: 6 }}>Force state (no auth needed)</small>
-            <button
-              style={{ background: '#059669' }}
-              onClick={() => {
-                ctx.setPasskeyRegistrationComplete(true);
-                ctx.setPasskeyRegistrationError(undefined);
-                setShowPasskeyPrompt({ value: true, importMode: false });
-              }}
-            >
-              Force Success State
-            </button>
-            <button
-              style={{ background: '#dc2626' }}
-              onClick={() => {
-                ctx.setPasskeyRegistrationComplete(false);
-                ctx.setPasskeyRegistrationError('Simulated error: NotAllowedError -- The operation either timed out or was not allowed.');
-                setShowPasskeyPrompt({ value: true, importMode: false });
-              }}
-            >
-              Force Error State
-            </button>
-            <div className="status">
-              <div>visible: {String(showPasskeyPrompt.value)}</div>
-              <div>importMode: {String(showPasskeyPrompt.importMode)}</div>
-              <div>complete: {String(ctx.passkeyRegistrationComplete)}</div>
-              <div>error: {ctx.passkeyRegistrationError ? 'yes' : 'none'}</div>
+          <div className="sidebar">
+            <div className="sidebar-section">
+              <div className="sidebar-label">Open modal</div>
+              <button
+                className="sidebar-btn"
+                onClick={() => setShowPasskeyPrompt({ value: true, importMode: false })}
+              >
+                Show Create
+              </button>
+              <button
+                className="sidebar-btn"
+                onClick={() => setShowPasskeyPrompt({ value: true, importMode: true })}
+              >
+                Show Import
+              </button>
+              <button
+                className="sidebar-btn"
+                onClick={() => setShowPasskeyPrompt({ value: false, importMode: false })}
+              >
+                Hide Modal
+              </button>
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-label">Force state</div>
+              <button
+                className="sidebar-btn btn-success"
+                onClick={() => {
+                  ctx.setPasskeyRegistrationComplete(true);
+                  ctx.setPasskeyRegistrationError(undefined);
+                  setShowPasskeyPrompt({ value: true, importMode: false });
+                }}
+              >
+                Force Success
+              </button>
+              <button
+                className="sidebar-btn btn-danger"
+                onClick={() => {
+                  ctx.setPasskeyRegistrationComplete(false);
+                  ctx.setPasskeyRegistrationError('Simulated: NotAllowedError -- timed out or not allowed.');
+                  setShowPasskeyPrompt({ value: true, importMode: false });
+                }}
+              >
+                Force Error
+              </button>
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-label">Context state</div>
+              <div className="status-block">
+                <div className="status-row">
+                  <span className="status-key">visible</span>
+                  <span className={`status-val ${showPasskeyPrompt.value}`}>{String(showPasskeyPrompt.value)}</span>
+                </div>
+                <div className="status-row">
+                  <span className="status-key">importMode</span>
+                  <span className={`status-val ${showPasskeyPrompt.importMode}`}>{String(showPasskeyPrompt.importMode)}</span>
+                </div>
+                <div className="status-row">
+                  <span className="status-key">complete</span>
+                  <span className={`status-val ${ctx.passkeyRegistrationComplete}`}>{String(ctx.passkeyRegistrationComplete)}</span>
+                </div>
+                <div className="status-row">
+                  <span className="status-key">error</span>
+                  <span className={`status-val ${ctx.passkeyRegistrationError ? 'yes' : 'false'}`}>
+                    {ctx.passkeyRegistrationError ? 'set' : 'none'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -138,22 +473,43 @@
         return { address, registrations: [] };
       }, []);
 
-      const mockUploadRegistration = useCallback(async () => {
-        // no-op
-      }, []);
+      const mockUploadRegistration = useCallback(async () => {}, []);
 
       return (
         <PasskeysProvider fqAppPrefix="MODAL-TEST">
-          <ControlPanel />
+          <div className="shell">
+            <header className="topbar">
+              <span className="topbar-wordmark">Quilibrium</span>
+              <div className="topbar-sep" />
+              <span className="topbar-title">passkey-modal / component test</span>
+              <div className="topbar-dot">
+                <div className="dot" />
+                <span>dist/index.esm.js</span>
+              </div>
+            </header>
+            <ControlPanel />
+            <main className="stage">
+              <div className="stage-hero">
+                <div className="stage-hero-eyebrow">Component test harness</div>
+                <h1 className="stage-hero-title">Passkey<span>Modal</span></h1>
+                <p className="stage-hero-sub">
+                  Real component from dist/. Use the sidebar to open modal flows
+                  or inject state without an authenticator.
+                </p>
+                <div className="stage-instructions">
+                  <div className="step"><span className="step-num">1</span><span>Click <strong>Show Create</strong> or <strong>Show Import</strong> to open the modal</span></div>
+                  <div className="step"><span className="step-num">2</span><span>Continue triggers a real WebAuthn prompt (localhost or HTTPS required)</span></div>
+                  <div className="step"><span className="step-num">3</span><span>Use <strong>Force Success / Error</strong> to test UI states without an authenticator</span></div>
+                  <div className="step"><span className="step-num">4</span><span>Also open <a href="hook-test.html">hook-test.html</a> to inspect the state machine directly</span></div>
+                </div>
+              </div>
+            </main>
+          </div>
           <PasskeyModal
             fqAppPrefix="MODAL-TEST"
             getUserRegistration={mockGetUserRegistration}
             uploadRegistration={mockUploadRegistration}
           />
-          <div className="hero">
-            <h1>PasskeyModal Visual Test</h1>
-            <p>Use the control panel to open the modal and test flows end-to-end.</p>
-          </div>
         </PasskeysProvider>
       );
     };
@@ -163,8 +519,9 @@
   </script>
 
   <script type="module">
-    import * as SDK from '../dist/index.esm.js';
-    window.__SDK__ = SDK;
+    import('../dist/index.esm.js')
+      .then(sdk => { window.__SDK__ = sdk; })
+      .catch(err => { console.error('SDK load failed:', err); window.__SDK_ERROR__ = true; });
   </script>
 </body>
 </html>

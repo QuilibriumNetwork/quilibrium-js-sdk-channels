@@ -3,128 +3,544 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>usePasskeyFlow Hook Inspector</title>
+  <title>usePasskeyFlow — Hook Inspector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Syne:wght@600;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link rel="stylesheet" href="../dist/index.css">
   <style>
+    :root {
+      --bg:        #0a0a0b;
+      --bg-panel:  #0e0e12;
+      --bg-raised: #141419;
+      --border:    #1e1e28;
+      --border-hi: #32323f;
+      --text:      #e8e6f0;
+      --text-dim:  #55546a;
+      --text-mid:  #9691ab;
+      --amber:     #f5a623;
+      --amber-dim: rgba(245,166,35,0.08);
+      --green:     #39d98a;
+      --green-dim: rgba(57,217,138,0.08);
+      --red:       #f25c5c;
+      --red-dim:   rgba(242,92,92,0.08);
+      --blue:      #6e8efb;
+      --violet:    #a78bfa;
+      --mono:      'IBM Plex Mono', monospace;
+      --display:   'Syne', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      font-family: var(--mono);
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
-      padding: 20px;
-      box-sizing: border-box;
-      color: #e0e0e0;
+      background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.008) 2px,
+        rgba(255,255,255,0.008) 4px
+      );
     }
-    h1 { color: #60a5fa; font-size: 1.4rem; margin: 0 0 16px 0; }
-    h2 { color: #93c5fd; font-size: 1rem; margin: 0 0 10px 0; }
-    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 900px; margin: 0 auto; }
+
+    /* ---- LOADING ---- */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 20px;
+    }
+    .loading-wordmark {
+      font-family: var(--display);
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .loading-bar-wrap {
+      width: 200px;
+      height: 2px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    .loading-bar {
+      height: 100%;
+      background: var(--amber);
+      animation: loadbar 1.8s ease-in-out infinite;
+      transform-origin: left;
+    }
+    @keyframes loadbar {
+      0%   { transform: scaleX(0) translateX(0%); opacity: 1; }
+      60%  { transform: scaleX(1) translateX(0%); opacity: 1; }
+      100% { transform: scaleX(1) translateX(110%); opacity: 0; }
+    }
+    .loading-label {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+    .loading-error {
+      font-size: 0.72rem;
+      color: var(--red);
+      text-align: center;
+      max-width: 340px;
+      line-height: 1.6;
+    }
+    .loading-error code {
+      display: block;
+      margin-top: 6px;
+      color: var(--text-mid);
+      background: var(--bg-raised);
+      padding: 6px 10px;
+      border-radius: 4px;
+    }
+
+    /* ---- SHELL ---- */
+    .shell {
+      display: grid;
+      grid-template-rows: 52px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ---- TOPBAR ---- */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-panel);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-wordmark {
+      font-family: var(--display);
+      font-size: 0.88rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .topbar-sep { width: 1px; height: 18px; background: var(--border); }
+    .topbar-title {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+    .topbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .topbar-link {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .topbar-link:hover { color: var(--text); border-color: var(--border-hi); }
+    .topbar-dot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+
+    /* ---- MAIN ---- */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      grid-template-rows: auto 1fr;
+      gap: 0;
+      padding: 28px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ---- STEP MACHINE ---- */
+    .machine-wrap {
+      grid-column: 1 / -1;
+      margin-bottom: 24px;
+    }
+    .machine-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .machine {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 20px;
+      overflow-x: auto;
+    }
+    .machine-step {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+    }
+    .machine-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: default;
+    }
+    .machine-node-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border-hi);
+      border: 2px solid var(--border-hi);
+      transition: all 0.25s;
+      flex-shrink: 0;
+    }
+    .machine-node-label {
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      transition: color 0.25s;
+    }
+    .machine-node.active .machine-node-dot {
+      background: var(--amber);
+      border-color: var(--amber);
+      box-shadow: 0 0 10px var(--amber), 0 0 20px rgba(245,166,35,0.3);
+    }
+    .machine-node.active .machine-node-label {
+      color: var(--amber);
+    }
+    .machine-node.done .machine-node-dot {
+      background: var(--green);
+      border-color: var(--green);
+    }
+    .machine-node.done .machine-node-label {
+      color: var(--green);
+    }
+    .machine-node.error-node .machine-node-dot {
+      background: var(--red);
+      border-color: var(--red);
+      box-shadow: 0 0 8px var(--red);
+    }
+    .machine-node.error-node .machine-node-label { color: var(--red); }
+    .machine-edge {
+      width: 32px;
+      height: 2px;
+      background: var(--border);
+      flex-shrink: 0;
+      position: relative;
+      top: -8px;
+      transition: background 0.25s;
+    }
+    .machine-edge.lit { background: var(--green); }
+
+    /* ---- LEFT COL ---- */
+    .left-col {
+      padding-right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ---- PANELS ---- */
     .panel {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 10px;
-      padding: 16px;
-    }
-    .state-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
-    .state-key { color: #9ca3af; }
-    .state-value { color: #f0f0f0; font-family: monospace; }
-    .state-value.step { color: #34d399; font-weight: bold; }
-    .state-value.error { color: #f87171; }
-    .state-value.null { color: #6b7280; font-style: italic; }
-    .state-value.bool-true { color: #34d399; }
-    .state-value.bool-false { color: #f87171; }
-    .actions { display: flex; flex-direction: column; gap: 8px; }
-    button {
-      padding: 8px 14px;
-      border: none;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
       border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 500;
-      text-align: left;
-      transition: opacity 0.15s;
+      overflow: hidden;
     }
-    button:disabled { opacity: 0.35; cursor: default; }
-    .btn-primary { background: #2563eb; color: white; }
-    .btn-success { background: #059669; color: white; }
-    .btn-warning { background: #d97706; color: white; }
-    .btn-danger { background: #dc2626; color: white; }
-    .btn-secondary { background: #4b5563; color: white; }
-    .btn-file { background: #7c3aed; color: white; }
-    .log {
-      background: rgba(0,0,0,0.3);
-      border-radius: 6px;
-      padding: 10px;
-      font-family: monospace;
-      font-size: 0.75rem;
-      max-height: 180px;
-      overflow-y: auto;
-      color: #d1d5db;
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
     }
-    .log-entry { margin-bottom: 4px; }
-    .log-entry .ts { color: #6b7280; margin-right: 8px; }
-    .log-entry .step-change { color: #60a5fa; }
-    .log-entry .err { color: #f87171; }
-    .log-entry .ok { color: #34d399; }
-    .notice {
-      background: rgba(251,191,36,0.1);
-      border: 1px solid rgba(251,191,36,0.3);
-      border-radius: 6px;
+    .panel-title {
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .panel-body { padding: 14px; }
+
+    /* ---- STATE ROWS ---- */
+    .state-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+    }
+    .state-cell {
+      background: var(--bg-raised);
       padding: 10px 12px;
-      font-size: 0.8rem;
-      color: #fbbf24;
-      margin-bottom: 16px;
     }
+    .state-cell-key {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+    .state-cell-val {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-mid);
+      word-break: break-all;
+    }
+    .state-cell-val.v-step   { color: var(--amber); }
+    .state-cell-val.v-null   { color: var(--text-dim); font-style: italic; font-size: 0.7rem; }
+    .state-cell-val.v-true   { color: var(--green); }
+    .state-cell-val.v-false  { color: var(--red); }
+    .state-cell-val.v-error  { color: var(--red); font-size: 0.68rem; }
+    .state-cell-val.v-addr   { color: var(--blue); font-size: 0.68rem; }
+
+    /* ---- LOG ---- */
+    .log-list {
+      font-size: 0.68rem;
+      line-height: 1.5;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+    .log-list::-webkit-scrollbar { width: 4px; }
+    .log-list::-webkit-scrollbar-track { background: transparent; }
+    .log-list::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+    .log-row {
+      display: flex;
+      gap: 10px;
+      padding: 3px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.025);
+      transition: background 0.1s;
+    }
+    .log-row:last-child { border-bottom: none; }
+    .log-row:hover { background: var(--bg-raised); }
+    .log-ts { color: var(--text-dim); flex-shrink: 0; }
+    .log-msg.step-change { color: var(--blue); }
+    .log-msg.err         { color: var(--red); }
+    .log-msg.ok          { color: var(--green); }
+    .log-msg.default     { color: var(--text-mid); }
+    .log-empty { padding: 16px 14px; color: var(--text-dim); font-size: 0.68rem; font-style: italic; }
+
+    /* ---- NOTICE ---- */
+    .notice {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: rgba(245,166,35,0.06);
+      border: 1px solid rgba(245,166,35,0.2);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.68rem;
+      color: rgba(245,166,35,0.8);
+      line-height: 1.55;
+    }
+    .notice-icon { flex-shrink: 0; opacity: 0.7; margin-top: 1px; }
+
+    /* ---- RIGHT COL (ACTIONS) ---- */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .action-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px;
+    }
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-mid);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+      width: 100%;
+    }
+    .action-btn:hover:not(:disabled) {
+      border-color: var(--border-hi);
+      color: var(--text);
+      background: var(--bg-raised);
+    }
+    .action-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .action-btn .btn-accent {
+      width: 3px;
+      height: 14px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .ab-primary .btn-accent  { background: var(--blue); }
+    .ab-success .btn-accent  { background: var(--green); }
+    .ab-warning .btn-accent  { background: var(--amber); }
+    .ab-violet  .btn-accent  { background: var(--violet); }
+    .ab-neutral .btn-accent  { background: var(--text-dim); }
+    .ab-danger  .btn-accent  { background: var(--red); }
+
+    .ab-primary:hover:not(:disabled) { border-color: rgba(110,142,251,0.4); }
+    .ab-success:hover:not(:disabled) { border-color: rgba(57,217,138,0.4); }
+    .ab-warning:hover:not(:disabled) { border-color: rgba(245,166,35,0.4); }
+    .ab-violet:hover:not(:disabled)  { border-color: rgba(167,139,250,0.4); }
+
+    .action-btn-label { flex: 1; }
+    .action-btn-hint  { font-size: 0.6rem; color: var(--text-dim); margin-top: 1px; }
+
+    .action-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    .action-btn.ab-danger { color: var(--red); opacity: 0.6; }
+    .action-btn.ab-danger:hover { opacity: 1; border-color: rgba(242,92,92,0.4); background: var(--red-dim); }
   </style>
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel">
-    // NOTE: This page uses the built SDK from dist/.
-    // Run `yarn build` before testing, or `yarn dev` for watch mode.
-    // The SDK is loaded via a module script below — Babel transpiles JSX only.
 
-    const { useState, useEffect, useCallback, createRef } = React;
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+
+    const STEPS = ['idle', 'initializing', 'awaiting_passkey', 'awaiting_completion', 'uploading', 'complete'];
+
+    const LoadingScreen = ({ error }) => (
+      <div className="loading-screen">
+        <div className="loading-wordmark">Quilibrium SDK</div>
+        {error ? (
+          <div className="loading-error">
+            Failed to load SDK module.
+            <code>Run `yarn build` then refresh.</code>
+          </div>
+        ) : (
+          <>
+            <div className="loading-bar-wrap"><div className="loading-bar" /></div>
+            <div className="loading-label">loading dist/index.esm.js</div>
+          </>
+        )}
+      </div>
+    );
+
+    const StepMachine = ({ currentStep }) => {
+      const stepIdx = STEPS.indexOf(currentStep);
+      return (
+        <div className="machine-wrap">
+          <div className="machine-label">State machine</div>
+          <div className="machine">
+            {STEPS.map((step, i) => {
+              const isActive = step === currentStep;
+              const isDone = stepIdx > i && stepIdx !== -1;
+              const isError = currentStep === 'error';
+              return (
+                <div className="machine-step" key={step}>
+                  <div className={`machine-node ${isActive ? 'active' : ''} ${isDone ? 'done' : ''} ${isActive && isError ? 'error-node' : ''}`}>
+                    <div className="machine-node-dot" />
+                    <div className="machine-node-label">{step}</div>
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <div className={`machine-edge ${isDone ? 'lit' : ''}`} />
+                  )}
+                </div>
+              );
+            })}
+            {currentStep === 'error' && (
+              <>
+                <div className="machine-edge" />
+                <div className="machine-node error-node">
+                  <div className="machine-node-dot" />
+                  <div className="machine-node-label">error</div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    };
 
     const HookInspector = () => {
       const [sdkReady, setSdkReady] = useState(false);
+      const [sdkError, setSdkError] = useState(false);
       const [log, setLog] = useState([]);
+      const logEndRef = useRef(null);
 
       const addLog = useCallback((type, msg) => {
         const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
-        setLog(prev => [...prev.slice(-49), { ts, type, msg }]);
+        setLog(prev => [...prev.slice(-99), { ts, type, msg }]);
       }, []);
 
       useEffect(() => {
+        logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [log]);
+
+      useEffect(() => {
+        let attempts = 0;
         const interval = setInterval(() => {
-          if (window.__SDK__) { setSdkReady(true); clearInterval(interval); }
+          if (window.__SDK__) {
+            setSdkReady(true);
+            clearInterval(interval);
+          } else if (window.__SDK_ERROR__ || ++attempts > 80) {
+            setSdkError(true);
+            clearInterval(interval);
+          }
         }, 100);
         return () => clearInterval(interval);
       }, []);
 
-      if (!sdkReady) {
-        return (
-          <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>
-            <p>Loading SDK from <code>../dist/index.esm.js</code>...</p>
-            <p style={{ fontSize: '0.8rem' }}>If this doesn't resolve, run <code>yarn build</code> first.</p>
-          </div>
-        );
-      }
+      if (!sdkReady) return <LoadingScreen error={sdkError} />;
 
       const { PasskeysProvider, usePasskeyFlow } = window.__SDK__;
 
       const FlowTester = () => {
-        const fileInputRef = createRef();
+        const fileInputRef = useRef(null);
 
         const mockGetUserRegistration = useCallback(async (address) => {
-          addLog('ok', `getUserRegistration called: ${address.slice(0,12)}...`);
+          addLog('ok', `getUserRegistration(${address.slice(0,10)}...)`);
           return { address, registrations: [] };
         }, []);
 
         const mockUploadRegistration = useCallback(async ({ address }) => {
-          addLog('ok', `uploadRegistration called: ${address.slice(0,12)}...`);
+          addLog('ok', `uploadRegistration(${address.slice(0,10)}...)`);
         }, []);
 
         const hook = usePasskeyFlow({
@@ -132,119 +548,178 @@
           getUserRegistration: mockGetUserRegistration,
           uploadRegistration: mockUploadRegistration,
           onStepChange: (step) => addLog('step-change', `step -> ${step}`),
-          onComplete: () => addLog('ok', 'onComplete fired'),
-          onError: (err) => addLog('err', `onError: ${err.code} - ${err.rawMessage ?? ''}`),
-          onCancel: () => addLog('ok', 'onCancel fired'),
+          onComplete:   ()     => addLog('ok', 'onComplete fired'),
+          onError:      (err)  => addLog('err', `onError: ${err.code}${err.rawMessage ? ' / ' + err.rawMessage : ''}`),
+          onCancel:     ()     => addLog('ok', 'onCancel fired'),
         });
 
         const handleFileImport = (e) => {
           const file = e.target.files?.[0];
           if (file) {
-            addLog('ok', `importing file: ${file.name}`);
+            addLog('ok', `importKeyFile: ${file.name}`);
             hook.importKeyFile(file);
           }
         };
 
-        const val = (v) => {
-          if (v === null || v === undefined) return <span className="state-value null">null</span>;
-          if (typeof v === 'boolean') return <span className={`state-value bool-${v}`}>{String(v)}</span>;
-          if (typeof v === 'string' && v === hook.step) return <span className="state-value step">{v}</span>;
-          return <span className="state-value">{String(v)}</span>;
+        const valClass = (k, v) => {
+          if (v === null || v === undefined) return 'v-null';
+          if (k === 'step') return 'v-step';
+          if (k === 'address') return 'v-addr';
+          if (k.startsWith('error')) return v ? 'v-error' : 'v-null';
+          if (typeof v === 'boolean') return v ? 'v-true' : 'v-false';
+          return '';
+        };
+        const valDisplay = (k, v) => {
+          if (v === null || v === undefined) return 'null';
+          if (k === 'address' && typeof v === 'string') return v.slice(0,18) + '...';
+          return String(v);
         };
 
+        const stateFields = [
+          ['step',           hook.step],
+          ['isPasskeySupported', hook.isPasskeySupported],
+          ['isImportMode',   hook.isImportMode],
+          ['canRetry',       hook.canRetry],
+          ['error.code',     hook.error?.code ?? null],
+          ['error.rawMessage', hook.error?.rawMessage ?? null],
+          ['address',        hook.address ?? null],
+        ];
+
         return (
-          <div className="layout">
-            <div>
-              <div className="notice">
-                Actions that call WebAuthn (startRegistration, completeRegistration) will trigger
-                a real browser passkey prompt. Make sure you're on localhost or HTTPS.
-              </div>
+          <div className="main">
+            <StepMachine currentStep={hook.step} />
 
-              <div className="panel" style={{ marginBottom: 16 }}>
-                <h2>Hook State</h2>
-                {[
-                  ['step', hook.step],
-                  ['error.code', hook.error?.code ?? null],
-                  ['error.rawMessage', hook.error?.rawMessage ?? null],
-                  ['address', hook.address ? hook.address.slice(0,16) + '...' : null],
-                  ['isImportMode', hook.isImportMode],
-                  ['isPasskeySupported', hook.isPasskeySupported],
-                  ['canRetry', hook.canRetry],
-                ].map(([k, v]) => (
-                  <div className="state-row" key={k}>
-                    <span className="state-key">{k}</span>
-                    {val(v)}
-                  </div>
-                ))}
-              </div>
-
+            <div className="left-col">
               <div className="panel">
-                <h2>Event Log</h2>
-                <div className="log">
-                  {log.length === 0 && <div style={{ color: '#6b7280' }}>No events yet.</div>}
-                  {log.map((entry, i) => (
-                    <div className="log-entry" key={i}>
-                      <span className="ts">{entry.ts}</span>
-                      <span className={entry.type}>{entry.msg}</span>
+                <div className="panel-header">
+                  <span className="panel-title">Hook state</span>
+                </div>
+                <div className="state-grid">
+                  {stateFields.map(([k, v]) => (
+                    <div className="state-cell" key={k}>
+                      <div className="state-cell-key">{k}</div>
+                      <div className={`state-cell-val ${valClass(k, v)}`}>{valDisplay(k, v)}</div>
                     </div>
                   ))}
                 </div>
               </div>
+
+              <div className="notice">
+                <span className="notice-icon">!</span>
+                <span>
+                  startRegistration and completeRegistration trigger a real WebAuthn prompt.
+                  Must be on localhost or HTTPS.
+                </span>
+              </div>
+
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">Event log</span>
+                  <button
+                    onClick={() => setLog([])}
+                    style={{
+                      background: 'none', border: 'none', color: 'var(--text-dim)',
+                      font: 'inherit', fontSize: '0.6rem', cursor: 'pointer',
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                    }}
+                  >
+                    clear
+                  </button>
+                </div>
+                <div className="log-list">
+                  {log.length === 0
+                    ? <div className="log-empty">No events yet. Trigger an action.</div>
+                    : log.map((entry, i) => (
+                        <div className="log-row" key={i}>
+                          <span className="log-ts">{entry.ts}</span>
+                          <span className={`log-msg ${entry.type}`}>{entry.msg}</span>
+                        </div>
+                      ))
+                  }
+                  <div ref={logEndRef} />
+                </div>
+              </div>
             </div>
 
-            <div className="panel">
-              <h2>Actions</h2>
-              <div className="actions">
-                <button className="btn-primary" onClick={() => hook.startRegistration()}>
-                  startRegistration()
-                </button>
-                <button
-                  className="btn-success"
-                  onClick={() => hook.completeRegistration()}
-                  disabled={hook.step !== 'awaiting_completion'}
-                >
-                  completeRegistration() <small>(requires step: awaiting_completion)</small>
-                </button>
-                <button className="btn-warning" onClick={() => hook.proceedWithoutPasskey()}>
-                  proceedWithoutPasskey()
-                </button>
-                <button
-                  className="btn-file"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  importKeyFile() -- pick .key file
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".key"
-                  style={{ display: 'none' }}
-                  onChange={handleFileImport}
-                />
-                <button
-                  className="btn-secondary"
-                  onClick={() => hook.retry()}
-                  disabled={!hook.canRetry}
-                >
-                  retry() <small>(requires canRetry: true)</small>
-                </button>
-                <button className="btn-secondary" onClick={() => hook.cancel()}>
-                  cancel()
-                </button>
-                <button className="btn-secondary" onClick={() => hook.dismiss()}>
-                  dismiss()
-                </button>
-                <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0' }} />
-                <button
-                  className="btn-danger"
-                  onClick={() => {
-                    setLog([]);
-                    addLog('ok', 'log cleared');
-                  }}
-                  style={{ fontSize: '0.75rem' }}
-                >
-                  Clear log
-                </button>
+            <div className="right-col">
+              <div className="panel">
+                <div className="panel-header">
+                  <span className="panel-title">Actions</span>
+                </div>
+                <div className="action-list">
+                  <button className="action-btn ab-primary" onClick={() => hook.startRegistration()}>
+                    <div className="btn-accent" />
+                    <div>
+                      <div className="action-btn-label">startRegistration()</div>
+                    </div>
+                  </button>
+                  <button
+                    className="action-btn ab-success"
+                    onClick={() => hook.completeRegistration()}
+                    disabled={hook.step !== 'awaiting_completion'}
+                  >
+                    <div className="btn-accent" />
+                    <div>
+                      <div className="action-btn-label">completeRegistration()</div>
+                      <div className="action-btn-hint">requires: awaiting_completion</div>
+                    </div>
+                  </button>
+                  <button className="action-btn ab-warning" onClick={() => hook.proceedWithoutPasskey()}>
+                    <div className="btn-accent" />
+                    <div className="action-btn-label">proceedWithoutPasskey()</div>
+                  </button>
+                  <button className="action-btn ab-violet" onClick={() => fileInputRef.current?.click()}>
+                    <div className="btn-accent" />
+                    <div className="action-btn-label">importKeyFile()</div>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".key"
+                    style={{ display: 'none' }}
+                    onChange={handleFileImport}
+                  />
+                  <div className="action-divider" />
+                  <button
+                    className="action-btn ab-neutral"
+                    onClick={() => hook.retry()}
+                    disabled={!hook.canRetry}
+                  >
+                    <div className="btn-accent" />
+                    <div>
+                      <div className="action-btn-label">retry()</div>
+                      <div className="action-btn-hint">requires: canRetry</div>
+                    </div>
+                  </button>
+                  <button className="action-btn ab-neutral" onClick={() => hook.cancel()}>
+                    <div className="btn-accent" />
+                    <div className="action-btn-label">cancel()</div>
+                  </button>
+                  <button className="action-btn ab-neutral" onClick={() => hook.dismiss()}>
+                    <div className="btn-accent" />
+                    <div className="action-btn-label">dismiss()</div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="panel">
+                <div className="panel-header"><span className="panel-title">Navigation</span></div>
+                <div style={{ padding: '10px' }}>
+                  <a
+                    href="index.html"
+                    style={{
+                      display: 'block', padding: '9px 12px',
+                      background: 'var(--bg-raised)', border: '1px solid var(--border)',
+                      borderRadius: '4px', color: 'var(--text-mid)',
+                      textDecoration: 'none', fontSize: '0.7rem',
+                      transition: 'border-color 0.15s, color 0.15s',
+                    }}
+                    onMouseOver={e => { e.target.style.borderColor='var(--border-hi)'; e.target.style.color='var(--text)'; }}
+                    onMouseOut={e => { e.target.style.borderColor='var(--border)'; e.target.style.color='var(--text-mid)'; }}
+                  >
+                    PasskeyModal test &rarr;
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -253,8 +728,19 @@
 
       return (
         <PasskeysProvider fqAppPrefix="HOOK-TEST">
-          <div style={{ maxWidth: 900, margin: '0 auto' }}>
-            <h1>usePasskeyFlow -- Hook Inspector</h1>
+          <div className="shell">
+            <header className="topbar">
+              <span className="topbar-wordmark">Quilibrium</span>
+              <div className="topbar-sep" />
+              <span className="topbar-title">usePasskeyFlow / hook inspector</span>
+              <div className="topbar-right">
+                <a className="topbar-link" href="index.html">modal test</a>
+                <div className="topbar-dot">
+                  <div className="dot" />
+                  <span>dist/index.esm.js</span>
+                </div>
+              </div>
+            </header>
             <FlowTester />
           </div>
         </PasskeysProvider>
@@ -265,10 +751,10 @@
     root.render(<HookInspector />);
   </script>
 
-  <!-- Load the built SDK as an ES module and expose it as a global for the Babel script above -->
   <script type="module">
-    import * as SDK from '../dist/index.esm.js';
-    window.__SDK__ = SDK;
+    import('../dist/index.esm.js')
+      .then(sdk => { window.__SDK__ = sdk; })
+      .catch(err => { console.error('SDK load failed:', err); window.__SDK_ERROR__ = true; });
   </script>
 </body>
 </html>

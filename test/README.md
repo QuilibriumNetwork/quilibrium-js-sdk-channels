@@ -6,13 +6,13 @@ Two visual test pages for the SDK, both served by `yarn test`.
 
 ```bash
 yarn build       # build the SDK first (required -- test pages load from dist/)
-yarn test        # serve test/ on http://localhost:3001
+yarn test        # serve project root on http://localhost:3001
 ```
 
 Then open:
 
-- `http://localhost:3001` -- PasskeyModal full component test
-- `http://localhost:3001/hook-test.html` -- usePasskeyFlow hook inspector
+- `http://localhost:3001/test/` -- PasskeyModal full component test
+- `http://localhost:3001/test/hook-test.html` -- usePasskeyFlow hook inspector
 
 For build-verified testing (same as CI):
 
