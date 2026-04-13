@@ -10,8 +10,6 @@
     "build": "rollup -c && cp src/wasm/channelwasm_bg.wasm dist/channelwasm_bg.wasm",
     "dev": "rollup -c -w",
     "clean": "rimraf dist",
-    "check": "node test/sdk-check.js",
-    "serve": "node test/serve.js",
     "test": "node test/sdk-check.js && node test/serve.js",
     "test-build": "node test/create-build-test.js"
   },
