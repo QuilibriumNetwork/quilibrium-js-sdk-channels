@@ -247,6 +247,7 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
 
   const importKeyFile = useCallback(async (file: File): Promise<void> => {
     setInternalStep('importing');
+    setShowPasskeyPrompt({ ...showPasskeyPrompt, value: true, importMode: true });
     try {
       const data = await file.arrayBuffer();
       let keyHex: string;
@@ -289,10 +290,11 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
       setPasskeyRegistrationError(classified.rawMessage ?? 'Invalid key file');
       setInternalStep('error');
     }
-  }, [setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
+  }, [showPasskeyPrompt, setShowPasskeyPrompt, setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
 
   const startRegistration = useCallback(async (): Promise<void> => {
     setInternalStep('registering');
+    setShowPasskeyPrompt({ ...showPasskeyPrompt, value: true, importMode: false });
     try {
       const { pair, parsed: p } = getOrGenerateKeypair();
       const addr = await deriveAddress(p.public_key);
@@ -315,7 +317,7 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
       setPasskeyRegistrationError(classified.rawMessage ?? 'Registration failed');
       setInternalStep('error');
     }
-  }, [fqAppPrefix, getOrGenerateKeypair, deriveAddress, setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
+  }, [fqAppPrefix, showPasskeyPrompt, setShowPasskeyPrompt, getOrGenerateKeypair, deriveAddress, setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
 
   const completeRegistrationAction = useCallback(async (): Promise<void> => {
     setInternalStep('completing');
@@ -357,6 +359,7 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
 
   const proceedWithoutPasskey = useCallback(async (): Promise<void> => {
     setInternalStep('fallback_registering');
+    setShowPasskeyPrompt({ ...showPasskeyPrompt, value: true, importMode: false });
     try {
       window.localStorage.setItem(
         `${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`,
@@ -397,7 +400,7 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
       setPasskeyRegistrationError(classified.rawMessage ?? 'Fallback registration failed');
       setInternalStep('error');
     }
-  }, [fqAppPrefix, address, getOrGenerateKeypair, deriveAddress, buildAndUploadRegistration, setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
+  }, [fqAppPrefix, showPasskeyPrompt, setShowPasskeyPrompt, address, getOrGenerateKeypair, deriveAddress, buildAndUploadRegistration, setPasskeyRegistrationComplete, setPasskeyRegistrationError]);
 
   const retry = useCallback((): void => {
     if (!canRetry) return;
