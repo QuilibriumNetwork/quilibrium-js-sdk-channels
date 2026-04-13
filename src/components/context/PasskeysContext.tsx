@@ -97,6 +97,7 @@ const PasskeysProvider: FC<PasskeysContextProps> = ({ fqAppPrefix, children }) =
     setCurrentPassKeyInfo(storedPasskey);
   };
 
+  // Load stored passkeys on mount
   useEffect(() => {
     getStoredPasskeys().then((p) => {
       if (p.length > 0) {
@@ -104,6 +105,17 @@ const PasskeysProvider: FC<PasskeysContextProps> = ({ fqAppPrefix, children }) =
         setPasskeyRegistrationComplete(true);
       }
     });
+  }, []);
+
+  // Refresh currentPasskeyInfo after a new registration completes
+  useEffect(() => {
+    if (passkeyRegistrationComplete === true) {
+      getStoredPasskeys().then((p) => {
+        if (p.length > 0) {
+          setCurrentPassKeyInfo({ ...p[0] });
+        }
+      });
+    }
   }, [passkeyRegistrationComplete]);
 
   return (
