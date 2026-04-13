@@ -288,13 +288,13 @@ export const completeRegistration = async (
   } else {
     if (
       // @ts-expect-error passkeys
-      typeof credential.getClientExtensionResults().prf === 'undefined'
+      typeof write.getClientExtensionResults().prf === 'undefined'
     ) {
       throw new Error('invalid authenticator');
     }
     const key = Buffer.from(
       // @ts-expect-error passkeys
-      credential.getClientExtensionResults().prf.results.first
+      write.getClientExtensionResults().prf.results.first
     );
 
     const subtleKey = await window.crypto.subtle.importKey(
