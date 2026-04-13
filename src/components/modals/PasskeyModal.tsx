@@ -183,7 +183,7 @@ export const PasskeyModal = ({
         {/* Original condition: passkeyRegistrationError && (!importMode || keypair) */}
         {/* keypair being set maps to ready_with_keypair or later steps with keypair */}
         {passkeyRegistrationError &&
-          (!showPasskeyPrompt.importMode || hook.step === 'ready_with_keypair') && (
+          (!showPasskeyPrompt.importMode || hook.hasKeypair) && (
             <div
               onClick={() => hook.proceedWithoutPasskey()}
               className="passkey-modal-btn warning"

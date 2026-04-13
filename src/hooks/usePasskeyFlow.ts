@@ -441,6 +441,7 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
     address,
     isImportMode: !!showPasskeyPrompt.importMode,
     isPasskeySupported: passkeySupported,
+    hasKeypair: !!keypair,
     canRetry,
     startRegistration,
     completeRegistration: completeRegistrationAction,

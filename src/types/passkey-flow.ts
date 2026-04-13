@@ -61,6 +61,7 @@ export interface UsePasskeyFlowReturn {
   address: string | null;
   isImportMode: boolean;
   isPasskeySupported: boolean;
+  hasKeypair: boolean;
   canRetry: boolean;
 
   // Actions
