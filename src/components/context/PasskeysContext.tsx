@@ -63,41 +63,41 @@ const PasskeysProvider: FC<PasskeysContextProps> = ({ fqAppPrefix, children }) =
     useState<boolean | undefined>();
   const [passkeyRegistrationError, setPasskeyRegistrationError] =
     useState<string>();
-  const exportKey = async (credentialId: string) => {
+  const exportKey = async (credentialId: string): Promise<string> => {
     const cred = await authenticate(fqAppPrefix, { credentialId });
+    if (!cred.largeBlob) {
+      throw new Error('No key material in credential response');
+    }
     return cred.largeBlob;
   };
 
   const signWithPasskey = async (credentialId: string, payload: string) => {
     const cred = await authenticate(fqAppPrefix, { credentialId });
-    return ch.js_sign_ed448(
-      Buffer.from(JSON.parse(cred.largeBlob).private_key).toString('base64'),
-      payload
-    );
+    if (!cred.largeBlob) {
+      throw new Error('No key material in credential response');
+    }
+    // authenticate() normalizes all paths to return a hex string of the private key.
+    // Legacy data may be JSON with a .private_key field; handle both formats.
+    let privateKeyB64: string;
+    if (cred.largeBlob.startsWith('{')) {
+      privateKeyB64 = Buffer.from(
+        new Uint8Array(JSON.parse(cred.largeBlob).private_key)
+      ).toString('base64');
+    } else {
+      privateKeyB64 = Buffer.from(cred.largeBlob, 'hex').toString('base64');
+    }
+    return ch.js_sign_ed448(privateKeyB64, payload);
   };
 
   const updateStoredPasskey = (
     credentialId: string,
     storedPasskey: StoredPasskey
   ) => {
-    updatePasskey(currentPasskeyInfo!.credentialId, {
-      credentialId: currentPasskeyInfo!.credentialId,
-      address: currentPasskeyInfo!.address,
-      publicKey: currentPasskeyInfo!.publicKey,
-      displayName: storedPasskey.displayName,
-      pfpUrl: storedPasskey.pfpUrl,
-      completedOnboarding: storedPasskey.completedOnboarding,
-    });
-    setCurrentPassKeyInfo({
-      credentialId: currentPasskeyInfo!.credentialId,
-      address: currentPasskeyInfo!.address,
-      publicKey: currentPasskeyInfo!.publicKey,
-      displayName: storedPasskey.displayName,
-      pfpUrl: storedPasskey.pfpUrl,
-      completedOnboarding: storedPasskey.completedOnboarding,
-    });
+    updatePasskey(credentialId, storedPasskey);
+    setCurrentPassKeyInfo(storedPasskey);
   };
 
+  // Load stored passkeys on mount
   useEffect(() => {
     getStoredPasskeys().then((p) => {
       if (p.length > 0) {
@@ -105,6 +105,17 @@ const PasskeysProvider: FC<PasskeysContextProps> = ({ fqAppPrefix, children }) =
         setPasskeyRegistrationComplete(true);
       }
     });
+  }, []);
+
+  // Refresh currentPasskeyInfo after a new registration completes
+  useEffect(() => {
+    if (passkeyRegistrationComplete === true) {
+      getStoredPasskeys().then((p) => {
+        if (p.length > 0) {
+          setCurrentPassKeyInfo({ ...p[0] });
+        }
+      });
+    }
   }, [passkeyRegistrationComplete]);
 
   return (

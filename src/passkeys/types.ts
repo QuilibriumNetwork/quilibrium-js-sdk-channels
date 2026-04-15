@@ -62,11 +62,15 @@ export async function createKeyFromBuffer(
   );
 }
 
-export async function encryptDataSaveKey(id: number, data: Buffer) {
-  var keys = await makeKeys();
-  var encrypted = await encrypt(data, keys);
-  callOnStore((store: IDBObjectStore) => {
-    store.put({ id: id, keys: keys, encrypted: encrypted });
+export async function encryptDataSaveKey(id: number, data: Buffer): Promise<void> {
+  const keys = await makeKeys();
+  const encrypted = await encrypt(data, keys);
+  return new Promise((resolve, reject) => {
+    callOnStore((store: IDBObjectStore) => {
+      const req = store.put({ id, keys, encrypted });
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
   });
 }
 
@@ -123,7 +127,7 @@ function callOnStore(fn_: (store: IDBObjectStore) => void) {
   };
 }
 
-export const updateStoredPasskey = async (
+export const updateStoredPasskey = (
   credentialId: string,
   storedPasskey: StoredPasskey
 ) => {
@@ -133,10 +137,7 @@ export const updateStoredPasskey = async (
     passkeys = JSON.parse(passkeysList);
   }
 
-  if (passkeys.filter((p) => p.credentialId === credentialId)) {
-    passkeys = passkeys.filter((p) => p.credentialId !== credentialId);
-  }
-
+  passkeys = passkeys.filter((p) => p.credentialId !== credentialId);
   passkeys.push(storedPasskey);
 
   window.localStorage.setItem('passkeys-list', JSON.stringify(passkeys));
@@ -188,14 +189,16 @@ export const register = async (fqAppPrefix: string, account: string) => {
     throw new Error('could not register passkey');
   }
 
-  if (
-    (authtype == 'PRF' &&
-      // @ts-ignore
-      !credential.getClientExtensionResults().prf.enabled) ||
-      // @ts-ignore
-      !credential.getClientExtensionResults().largeBlob
-  ) {
-    window.localStorage.setItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`, 'true');
+  if (authtype == 'PRF') {
+    // @ts-ignore
+    if (!credential.getClientExtensionResults().prf?.enabled) {
+      window.localStorage.setItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`, 'true');
+    }
+  } else {
+    // @ts-ignore
+    if (!credential.getClientExtensionResults().largeBlob) {
+      window.localStorage.setItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`, 'true');
+    }
   }
 
   return {
@@ -203,16 +206,20 @@ export const register = async (fqAppPrefix: string, account: string) => {
     id: Buffer.from(credential.rawId).toString('base64'),
     // @ts-expect-error passkeys
     rawId: Buffer.from(credential.rawId).toString('base64'),
+    authtype,
   };
 };
 
 export const completeRegistration = async (
   fqAppPrefix: string,
-  request: PasskeyAuthenticationRequestLargeBlob
+  request: PasskeyAuthenticationRequestLargeBlob,
+  authtype?: string | null
 ) => {
   const challenge = new Uint8Array(32);
   window.crypto.getRandomValues(challenge);
-  const authtype = await isPasskeysSupported();
+  if (!authtype) {
+    authtype = await isPasskeysSupported();
+  }
 
   if (window.localStorage.getItem(`${fqAppPrefix.toLowerCase()}-master-prf-incompatibility`)) {
     await encryptDataSaveKey(1, Buffer.from(request.largeBlob, 'utf-8'));
@@ -288,13 +295,13 @@ export const completeRegistration = async (
   } else {
     if (
       // @ts-expect-error passkeys
-      typeof credential.getClientExtensionResults().prf === 'undefined'
+      typeof write.getClientExtensionResults().prf === 'undefined'
     ) {
       throw new Error('invalid authenticator');
     }
     const key = Buffer.from(
       // @ts-expect-error passkeys
-      credential.getClientExtensionResults().prf.results.first
+      write.getClientExtensionResults().prf.results.first
     );
 
     const subtleKey = await window.crypto.subtle.importKey(
@@ -321,6 +328,12 @@ export const completeRegistration = async (
         ciphertext: Buffer.from(largeBlob).toString('hex'),
       })
     );
+    updateStoredPasskey(request.credentialId, {
+      credentialId: request.credentialId,
+      address: request.address,
+      publicKey: request.publicKey,
+      completedOnboarding: false,
+    });
     return {
       id: request.credentialId,
       rawId: request.credentialId,
@@ -509,6 +522,7 @@ export const isPasskeysSupported = async () => {
 
 export interface PasskeyRegistrationResult {
   id: string;
+  authtype: string | null;
 }
 
 export interface PasskeyAuthenticationRequestLargeBlob {
