@@ -291,7 +291,7 @@ export function usePasskeyFlow(options: UsePasskeyFlowOptions): UsePasskeyFlowRe
       if (data.byteLength === 57) {
         keyHex = Buffer.from(data).toString('hex');
       } else {
-        keyHex = Buffer.from(data).toString('utf-8');
+        keyHex = Buffer.from(data).toString('utf-8').trim();
       }
 
       if (keyHex.length !== 114) {
